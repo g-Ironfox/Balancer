@@ -124,7 +124,7 @@ function renderRows() {
       <td><div class="location-cell" title="${escapeHtml(item.location)}">${escapeHtml(item.location)}</div></td>
       <td><span class="capacity-cell">${item.capacity} 人</span></td>
       <td><span class="status-pill ${statusClass(item.status)}">${escapeHtml(item.status)}</span></td>
-      <td><div class="row-actions"><button class="row-action" data-action="edit" data-id="${item.id}" title="编辑活动" aria-label="编辑 ${escapeHtml(item.title)}">✎</button><button class="row-action delete" data-action="delete" data-id="${item.id}" title="删除活动" aria-label="删除 ${escapeHtml(item.title)}">⌫</button></div></td>
+      <td><div class="row-actions"><button class="row-action" data-action="edit" data-id="${item.id}" title="编辑活动" aria-label="编辑 ${escapeHtml(item.title)}">✎</button><button class="row-action delete" data-action="delete" data-id="${item.id}" title="删除活动" aria-label="删除 ${escapeHtml(item.title)}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle"><path d="M3 6h18M8 6V4h8v2m3 0-1 14H6L5 6m5 4v7m4-7v7"/></svg></button></div></td>
     </tr>`).join("");
   document.querySelector("#result-count").textContent = `共 ${state.total} 条`;
   const start = state.total ? (state.page - 1) * PAGE_SIZE + 1 : 0;
@@ -428,12 +428,25 @@ document.querySelector("#previous-page").addEventListener("click", () => { state
 document.querySelector("#next-page").addEventListener("click", () => { state.page += 1; loadActivities(); });
 document.querySelector("#status-filter").addEventListener("change", (event) => { state.status = event.target.value; state.page = 1; loadActivities(); });
 document.querySelector("#category-filter").addEventListener("change", (event) => { state.category = event.target.value; renderRows(); });
-document.querySelector("#search-input").addEventListener("input", (event) => {
+const searchInput = document.querySelector("#search-input");
+const searchClear = document.querySelector("#search-clear");
+function clearSearch() {
   clearTimeout(searchTimer);
+  searchInput.value = "";
+  searchClear.hidden = true;
+  state.keyword = "";
+  state.page = 1;
+  loadActivities();
+  searchInput.focus();
+}
+searchInput.addEventListener("input", (event) => {
+  clearTimeout(searchTimer);
+  searchClear.hidden = !event.target.value;
   searchTimer = setTimeout(() => { state.keyword = event.target.value.trim(); state.page = 1; loadActivities(); }, 250);
 });
-document.querySelector("#search-input").addEventListener("keydown", (event) => {
-  if (event.key === "Escape") { event.currentTarget.value = ""; state.keyword = ""; state.page = 1; loadActivities(); }
+searchClear.addEventListener("click", clearSearch);
+searchInput.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && searchInput.value) clearSearch();
 });
 document.addEventListener("keydown", (event) => {
   if (event.key === "/" && !["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement.tagName)) {
