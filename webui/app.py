@@ -1,5 +1,7 @@
 import os
 import re
+import hashlib
+import secrets
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
@@ -14,10 +16,14 @@ from pydantic import BaseModel, Field, field_validator
 from pymongo import ASCENDING, DESCENDING, MongoClient
 from pymongo.collection import Collection
 from pymongo.errors import DuplicateKeyError
+from argon2 import PasswordHasher
+from argon2.exceptions import InvalidHashError, VerificationError, VerifyMismatchError
+from redis import Redis
 
 
 BASE_DIR = Path(__file__).resolve().parent
 MAKER_DIR = BASE_DIR / "static" / "makerpage"
+LOGIN_FILE = BASE_DIR / "static" / "login.html"
 UPLOAD_DIR = BASE_DIR / "uploads"
 ALLOWED_IMAGE_TYPES = {
     "image/png": ".png",
@@ -26,6 +32,9 @@ ALLOWED_IMAGE_TYPES = {
     "image/gif": ".gif",
 }
 MAX_IMAGE_BYTES = 5 * 1024 * 1024
+SESSION_COOKIE = "balancer_session"
+SESSION_TTL = 7 * 24 * 60 * 60
+password_hasher = PasswordHasher()
 
 
 class ActivityInput(BaseModel):
@@ -86,6 +95,85 @@ class ActivityPage(BaseModel):
     total: int
     page: int
     page_size: int
+
+
+class CredentialsInput(BaseModel):
+    username: str = Field(min_length=3, max_length=50)
+    password: str = Field(min_length=8, max_length=128)
+
+    @field_validator("username")
+    @classmethod
+    def normalize_username(cls, value: str) -> str:
+        value = value.strip().lower()
+        if not re.fullmatch(r"[a-z0-9_@.-]+", value):
+            raise ValueError("账号只能包含字母、数字、下划线、点、短横线或 @")
+        return value
+
+
+class LoginInput(CredentialsInput):
+    pass
+
+
+def session_key(token: str) -> str:
+    return f"session:{hashlib.sha256(token.encode()).hexdigest()}"
+
+
+def public_user(document: dict) -> dict:
+    return {"id": str(document["_id"]), "username": document["username"], "role": document["role"]}
+
+
+def get_user_collection(request: Request) -> Collection:
+    return request.app.state.database.users
+
+
+Users = Annotated[Collection, Depends(get_user_collection)]
+
+
+def get_current_user(request: Request) -> dict:
+    token = request.cookies.get(SESSION_COOKIE)
+    if not token:
+        raise HTTPException(status_code=401, detail="请先登录")
+    user_id = request.app.state.redis.get(session_key(token))
+    if not user_id:
+        raise HTTPException(status_code=401, detail="登录已过期，请重新登录")
+    user = request.app.state.database.users.find_one({"_id": ObjectId(user_id)})
+    if user is None or user.get("disabled", False):
+        request.app.state.redis.delete(session_key(token))
+        raise HTTPException(status_code=401, detail="账号不可用，请重新登录")
+    return user
+
+
+CurrentUser = Annotated[dict, Depends(get_current_user)]
+
+
+def require_admin(user: CurrentUser) -> dict:
+    if user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="没有管理员权限")
+    return user
+
+
+AdminUser = Annotated[dict, Depends(require_admin)]
+
+
+def set_session(response: Response, request: Request, user: dict) -> None:
+    token = secrets.token_urlsafe(32)
+    request.app.state.redis.setex(session_key(token), SESSION_TTL, str(user["_id"]))
+    response.set_cookie(
+        SESSION_COOKIE,
+        token,
+        max_age=SESSION_TTL,
+        httponly=True,
+        samesite="lax",
+        secure=os.getenv("COOKIE_SECURE", "false").lower() == "true",
+        path="/",
+    )
+
+
+def clear_session(response: Response, request: Request) -> None:
+    token = request.cookies.get(SESSION_COOKIE)
+    if token:
+        request.app.state.redis.delete(session_key(token))
+    response.delete_cookie(SESSION_COOKIE, path="/")
 
 
 def serialize_activity(document: dict, public: bool = False) -> dict:
@@ -153,21 +241,84 @@ async def lifespan(app: FastAPI):
     database.activities.create_index([("updated_at", DESCENDING)])
     database.registrations.create_index([("activity_id", ASCENDING), ("contact", ASCENDING)], unique=True)
     database.categories.create_index("name", unique=True)
+    database.users.create_index("username", unique=True)
     if database.categories.count_documents({}) == 0:
         seeded_at = datetime.now(timezone.utc)
         database.categories.insert_many(
             [{"name": name, "created_at": seeded_at} for name in DEFAULT_CATEGORIES]
         )
+    admin_username = os.getenv("ADMIN_USERNAME", "").strip().lower()
+    admin_password = os.getenv("ADMIN_PASSWORD", "")
+    if admin_username and admin_password and database.users.count_documents({}) == 0:
+        database.users.insert_one(
+            {
+                "username": admin_username,
+                "password_hash": password_hasher.hash(admin_password),
+                "role": "admin",
+                "disabled": False,
+                "created_at": datetime.now(timezone.utc),
+            }
+        )
     app.state.database = database
+    app.state.redis = Redis(
+        host=os.getenv("REDIS_HOST") or "redis",
+        port=int(os.getenv("REDIS_PORT", "6379")),
+        decode_responses=True,
+    )
+    app.state.redis.ping()
     yield
+    app.state.redis.close()
     client.close()
 
 
 app = FastAPI(title="Maker 开源硬件社 · 活动管理", lifespan=lifespan)
 
 
+@app.post("/api/auth/register", status_code=status.HTTP_201_CREATED)
+def register(payload: CredentialsInput, users: Users) -> dict:
+    if users.count_documents({"username": payload.username}):
+        raise HTTPException(status_code=409, detail="该账号已存在")
+    document = {
+        "username": payload.username,
+        "password_hash": password_hasher.hash(payload.password),
+        "role": "user",
+        "disabled": False,
+        "created_at": datetime.now(timezone.utc),
+    }
+    try:
+        document["_id"] = users.insert_one(document).inserted_id
+    except DuplicateKeyError:
+        raise HTTPException(status_code=409, detail="该账号已存在") from None
+    return public_user(document)
+
+
+@app.post("/api/auth/login")
+def login(payload: LoginInput, users: Users, request: Request, response: Response) -> dict:
+    user = users.find_one({"username": payload.username})
+    if user is None or user.get("disabled", False):
+        raise HTTPException(status_code=401, detail="账号或密码错误")
+    try:
+        password_hasher.verify(user["password_hash"], payload.password)
+    except (InvalidHashError, VerificationError, VerifyMismatchError):
+        raise HTTPException(status_code=401, detail="账号或密码错误") from None
+    set_session(response, request, user)
+    return public_user(user)
+
+
+@app.get("/api/auth/me")
+def current_user(user: CurrentUser) -> dict:
+    return public_user(user)
+
+
+@app.post("/api/auth/logout", status_code=status.HTTP_204_NO_CONTENT)
+def logout(request: Request, response: Response) -> Response:
+    clear_session(response, request)
+    return response
+
+
 @app.get("/api/activities", response_model=ActivityPage)
 def list_activities(
+    _: AdminUser,
     activities: Activities,
     keyword: str = Query(default="", max_length=100),
     activity_status: str = Query(default="", alias="status"),
@@ -232,7 +383,7 @@ def public_activities(
 
 
 @app.get("/api/activities/summary")
-def activity_summary(activities: Activities) -> dict[str, int]:
+def activity_summary(_: AdminUser, activities: Activities) -> dict[str, int]:
     now = datetime.now(timezone.utc)
     month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     if month_start.month == 12:
@@ -253,7 +404,7 @@ def activity_summary(activities: Activities) -> dict[str, int]:
 
 
 @app.get("/api/activities/{activity_id}")
-def get_activity(activity_id: str, activities: Activities) -> dict:
+def get_activity(activity_id: str, _: AdminUser, activities: Activities) -> dict:
     document = activities.find_one({"_id": object_id_or_404(activity_id)})
     if document is None:
         raise HTTPException(status_code=404, detail="活动不存在")
@@ -282,7 +433,7 @@ def register_activity(activity_id: str, payload: RegistrationInput, request: Req
 
 
 @app.post("/api/activities", status_code=status.HTTP_201_CREATED)
-def create_activity(payload: ActivityInput, activities: Activities, categories: Categories) -> dict:
+def create_activity(payload: ActivityInput, _: AdminUser, activities: Activities, categories: Categories) -> dict:
     require_category(categories, payload.category)
     if payload.end_time <= payload.start_time:
         raise HTTPException(status_code=422, detail="结束时间必须晚于开始时间")
@@ -295,7 +446,13 @@ def create_activity(payload: ActivityInput, activities: Activities, categories: 
 
 
 @app.put("/api/activities/{activity_id}")
-def update_activity(activity_id: str, payload: ActivityInput, activities: Activities, categories: Categories) -> dict:
+def update_activity(
+    activity_id: str,
+    payload: ActivityInput,
+    _: AdminUser,
+    activities: Activities,
+    categories: Categories,
+) -> dict:
     require_category(categories, payload.category)
     if payload.end_time <= payload.start_time:
         raise HTTPException(status_code=422, detail="结束时间必须晚于开始时间")
@@ -312,7 +469,7 @@ def update_activity(activity_id: str, payload: ActivityInput, activities: Activi
 
 
 @app.delete("/api/activities/{activity_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_activity(activity_id: str, activities: Activities) -> Response:
+def delete_activity(activity_id: str, _: AdminUser, activities: Activities) -> Response:
     result = activities.delete_one({"_id": object_id_or_404(activity_id)})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="活动不存在")
@@ -320,7 +477,7 @@ def delete_activity(activity_id: str, activities: Activities) -> Response:
 
 
 @app.get("/api/categories")
-def list_categories(activities: Activities, categories: Categories) -> list[dict]:
+def list_categories(_: AdminUser, activities: Activities, categories: Categories) -> list[dict]:
     return [
         serialize_category(item, activities.count_documents({"category": item["name"]}))
         for item in categories.find().sort("created_at", ASCENDING)
@@ -328,7 +485,7 @@ def list_categories(activities: Activities, categories: Categories) -> list[dict
 
 
 @app.post("/api/categories", status_code=status.HTTP_201_CREATED)
-def create_category(payload: CategoryInput, categories: Categories) -> dict:
+def create_category(payload: CategoryInput, _: AdminUser, categories: Categories) -> dict:
     if categories.count_documents({"name": payload.name}):
         raise HTTPException(status_code=409, detail="该类别已存在")
     document = {"name": payload.name, "created_at": datetime.now(timezone.utc)}
@@ -338,7 +495,11 @@ def create_category(payload: CategoryInput, categories: Categories) -> dict:
 
 @app.put("/api/categories/{category_id}")
 def rename_category(
-    category_id: str, payload: CategoryInput, activities: Activities, categories: Categories
+    category_id: str,
+    payload: CategoryInput,
+    _: AdminUser,
+    activities: Activities,
+    categories: Categories,
 ) -> dict:
     document = categories.find_one({"_id": object_id_or_404(category_id, "类别不存在")})
     if document is None:
@@ -354,7 +515,9 @@ def rename_category(
 
 
 @app.delete("/api/categories/{category_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_category(category_id: str, activities: Activities, categories: Categories) -> Response:
+def delete_category(
+    category_id: str, _: AdminUser, activities: Activities, categories: Categories
+) -> Response:
     document = categories.find_one({"_id": object_id_or_404(category_id, "类别不存在")})
     if document is None:
         raise HTTPException(status_code=404, detail="类别不存在")
@@ -368,7 +531,7 @@ def delete_category(category_id: str, activities: Activities, categories: Catego
 
 
 @app.post("/api/uploads/image", status_code=status.HTTP_201_CREATED)
-async def upload_image(image: Annotated[UploadFile, File()]) -> dict[str, str]:
+async def upload_image(_: AdminUser, image: Annotated[UploadFile, File()]) -> dict[str, str]:
     suffix = ALLOWED_IMAGE_TYPES.get(image.content_type or "")
     if suffix is None:
         raise HTTPException(status_code=422, detail="仅支持 PNG / JPEG / WebP / GIF 图片")
@@ -391,6 +554,11 @@ async def upload_image(image: Annotated[UploadFile, File()]) -> dict[str, str]:
 @app.get("/", include_in_schema=False)
 def index() -> FileResponse:
     return FileResponse(MAKER_DIR / "index.html")
+
+
+@app.get("/login", include_in_schema=False)
+def login_page() -> FileResponse:
+    return FileResponse(LOGIN_FILE)
 
 
 @app.get("/admin", include_in_schema=False)

@@ -15,6 +15,9 @@ services:
       - MONGO_DB=${MONGO_DB}
       - REDIS_HOST=${REDIS_HOST}
       - REDIS_PORT=${REDIS_PORT}
+      - ADMIN_USERNAME=${ADMIN_USERNAME}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - COOKIE_SECURE=${COOKIE_SECURE:-false}
       - TZ=${TZ}
     volumes:
       - ./data/uploads:/app/uploads

@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>登录 | Maker 开源硬件社</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/login.css">
+</head>
+<body>
+  <main class="auth-shell">
+    <section class="auth-intro">
+      <a class="brand" href="/">m<span>✳</span></a>
+      <p class="eyebrow">MAKER CLUB / CLUB ACCESS</p>
+      <h1>把想法，<br>带进工作空间。</h1>
+      <p class="intro-copy">登录后管理社团活动、类别与活动素材。公开活动页面无需登录。</p>
+      <a class="back-link" href="/">← 返回活动海报</a>
+    </section>
+    <section class="auth-panel" aria-labelledby="auth-title">
+      <div class="panel-heading">
+        <p class="eyebrow">SECURE ENTRY</p>
+        <h2 id="auth-title">登录管理后台</h2>
+        <p id="auth-description">使用管理员账号继续。</p>
+      </div>
+      <form id="auth-form">
+        <label>账号<input id="auth-username" name="username" autocomplete="username" required minlength="3" maxlength="50"></label>
+        <label>密码<input id="auth-password" name="password" type="password" autocomplete="current-password" required minlength="8" maxlength="128"></label>
+        <p class="form-error" id="auth-error" role="alert"></p>
+        <button class="submit-button" id="auth-submit" type="submit">登录</button>
+      </form>
+      <button class="switch-button" id="auth-switch" type="button">创建普通账号</button>
+    </section>
+  </main>
+  <script src="/static/login.js" defer></script>
+</body>
+</html>

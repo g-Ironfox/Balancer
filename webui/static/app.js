@@ -9,6 +9,21 @@ const toast = document.querySelector("#toast");
 let searchTimer;
 let toastTimer;
 
+async function requireAdmin() {
+  const response = await fetch("/api/auth/me");
+  if (!response.ok) {
+    window.location.href = "/login";
+    throw new Error("未登录");
+  }
+  const user = await response.json();
+  if (user.role !== "admin") {
+    window.location.href = "/login";
+    throw new Error("没有管理员权限");
+  }
+  const avatar = document.querySelector("#profile-avatar");
+  if (avatar) avatar.textContent = user.username.slice(0, 1).toUpperCase();
+}
+
 function applyTheme(theme) {
   const dark = theme === "dark";
   document.body.classList.toggle("dark", dark);
@@ -424,6 +439,10 @@ document.querySelector("#theme-toggle").addEventListener("click", () => {
   localStorage.setItem("club-desk-theme", theme);
   applyTheme(theme);
 });
+document.querySelector("#logout-button").addEventListener("click", async () => {
+  await fetch("/api/auth/logout", { method: "POST" });
+  window.location.href = "/login";
+});
 document.querySelector("#previous-page").addEventListener("click", () => { state.page -= 1; loadActivities(); });
 document.querySelector("#next-page").addEventListener("click", () => { state.page += 1; loadActivities(); });
 document.querySelector("#status-filter").addEventListener("change", (event) => { state.status = event.target.value; state.page = 1; loadActivities(); });
@@ -455,4 +474,4 @@ document.addEventListener("keydown", (event) => {
   }
 });
 document.querySelector("#today-label").textContent = new Intl.DateTimeFormat("zh-CN", { year: "numeric", month: "long", day: "numeric", weekday: "short" }).format(new Date());
-refreshAll();
+requireAdmin().then(refreshAll).catch(() => {});
