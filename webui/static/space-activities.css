@@ -1,0 +1,23 @@
+.activity-timeline { position: relative; margin: 42px 0 0; padding-left: 28px; }
+.activity-timeline::before { content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 2px; background: #cbd9ce; }
+.timeline-stage { position: relative; padding: 30px 0 34px; }
+.timeline-stage::before { content: ""; position: absolute; top: 38px; left: -36px; width: 14px; height: 14px; border: 6px solid #f2f5f0; border-radius: 50%; background: #aab7af; box-shadow: 0 0 0 2px #cbd9ce; }
+.timeline-stage:first-child { padding-top: 0; }
+.timeline-stage:first-child::before { top: 8px; }
+.timeline-inner { padding-left: 0; }
+.timeline-heading { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+.timeline-label { margin: 0 0 10px; color: #66776d; font-size: 11px; font-weight: 700; letter-spacing: 1.5px; }
+.timeline-stage h2 { margin: 0 0 18px; font-size: 34px; line-height: 1.2; }
+.timeline-now { margin-left: -28px; padding-left: 28px; background: #fff8df; border-top: 1px solid #ead9a7; border-bottom: 1px solid #ead9a7; }
+.timeline-now::before { left: -36px; background: #b17a18; box-shadow: 0 0 0 2px #c78d25; }
+.timeline-next::before { background: #527aa8; box-shadow: 0 0 0 2px #7895b8; }
+.timeline-toggle { display: inline-flex; align-items: center; gap: 6px; border: 1px solid #b9c8bc; border-radius: 4px; padding: 8px 11px; background: transparent; color: #45614f; cursor: pointer; font: 600 12px inherit; }
+.timeline-toggle:hover { background: #e7f0e8; }
+.timeline-toggle svg { width: 15px; height: 15px; }
+.member-list { list-style: none; padding: 0; margin: 0; border-top: 1px solid #cbd9ce; }
+.member-list li { display: grid; grid-template-columns: minmax(155px, 200px) minmax(0, 1fr); gap: 18px; align-items: center; padding: 16px 0; border-bottom: 1px solid #cbd9ce; }
+.member-list time { font-size: 13px; color: #537160; }
+.member-list strong { display: block; font-size: 16px; overflow-wrap: anywhere; }
+.member-list li span { display: block; margin-top: 5px; color: #74847a; font-size: 13px; overflow-wrap: anywhere; }
+.member-list .empty { display: block; color: #74847a; font-size: 14px; }
+@media (max-width: 600px) { .member-list li { grid-template-columns: 1fr; gap: 5px; } }

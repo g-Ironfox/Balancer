@@ -9,10 +9,10 @@ const switchButton = document.querySelector("#auth-switch");
 let registerMode = false;
 
 function updateMode() {
-  title.textContent = registerMode ? "创建普通账号" : "登录管理后台";
-  description.textContent = registerMode ? "普通账号暂不具备管理后台权限。" : "使用管理员账号继续。";
+  title.textContent = registerMode ? "注册社员账号" : "登录我的空间";
+  description.textContent = registerMode ? "加入社团，开启你的空间。" : "使用社员账号继续。";
   submit.textContent = registerMode ? "注册账号" : "登录";
-  switchButton.textContent = registerMode ? "返回登录" : "创建普通账号";
+  switchButton.textContent = registerMode ? "返回登录" : "注册社员账号";
   password.autocomplete = registerMode ? "new-password" : "current-password";
   error.textContent = "";
 }
@@ -36,16 +36,12 @@ async function submitAuth(event) {
       registerMode = false;
       updateMode();
       password.value = "";
-      error.textContent = "账号已创建，请使用管理员账号登录。";
+      error.textContent = "账号已创建，请登录进入我的空间。";
       return;
     }
-    if (body.role !== "admin") {
-      await fetch("/api/auth/logout", { method: "POST" });
-      throw new Error("该账号没有管理后台权限");
-    }
-    window.location.href = "/admin";
+    window.location.href = "/space";
   } catch (authError) {
-    error.textContent = authError.message || "操作失败，请稍后重试。";
+    error.textContent = authError instanceof TypeError ? "网络连接失败，请稍后重试。" : authError.message || "操作失败，请稍后重试。";
   } finally {
     submit.disabled = false;
   }
@@ -58,15 +54,15 @@ switchButton.addEventListener("click", () => {
 form.addEventListener("submit", submitAuth);
 updateMode();
 
-async function redirectSignedInAdmin() {
+async function redirectSignedInUser() {
   try {
     const response = await fetch("/api/auth/me");
-    if (response.ok && (await response.json()).role === "admin") {
-      window.location.replace("/admin");
+    if (response.ok) {
+      window.location.replace("/space");
     }
   } catch {
     // Keep the login form available if session lookup fails.
   }
 }
 
-redirectSignedInAdmin();
+redirectSignedInUser();

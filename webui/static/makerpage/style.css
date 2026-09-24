@@ -70,11 +70,10 @@ button:hover { background: #ffffff16; color: #fff; }
 .detail-incentive-title { font-size: 18px; font-weight: 400; margin: 28px 0 0; }
 .detail-incentive { margin-top: 8px; }
 .detail-incentive-image { display: block; max-width: 100%; height: auto; margin-top: 8px; }
-.registration-form { display: grid; gap: 12px; margin-top: 30px; padding-top: 24px; border-top: 1px solid #ffffff24; }
-.registration-form input { width: 100%; min-width: 0; padding: 12px; border: 1px solid #405158; background: #0c1013; color: #f2f3f4; font: inherit; border-radius: 4px; }
-.registration-form input:focus-visible { outline: 2px solid #bddff4; }
+.registration-entry { display: inline-block; margin-top: 30px; text-decoration: none; }
+.registration-entry:disabled { cursor: not-allowed; }
 .registration-submit { width: auto; height: auto; border-radius: 4px; padding: 12px 20px; justify-self: start; color: #0c1013; background: #b7d6d4; }
-.registration-submit:disabled { opacity: .5; cursor: wait; }
+.registration-submit:disabled { opacity: .5; cursor: not-allowed; }
 .registration-message { color: #b7d6d4; margin: 0; font-size: 13px; }
 .about { padding: 46px 56px 28px; background: #101315; border-top: 1px solid #ffffff12; }
 .section-label { display: flex; justify-content: space-between; color: #8c959b; font-size: 10px; }

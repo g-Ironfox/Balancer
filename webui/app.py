@@ -65,19 +65,6 @@ class ActivityInput(BaseModel):
         return value.strip()
 
 
-class RegistrationInput(BaseModel):
-    name: str = Field(min_length=1, max_length=50)
-    contact: str = Field(min_length=1, max_length=100)
-
-    @field_validator("name", "contact")
-    @classmethod
-    def strip_text(cls, value: str) -> str:
-        value = value.strip()
-        if not value:
-            raise ValueError("不能为空")
-        return value
-
-
 class CategoryInput(BaseModel):
     name: str = Field(min_length=1, max_length=20)
 
@@ -239,7 +226,6 @@ async def lifespan(app: FastAPI):
     database = client[os.getenv("MONGO_DB", "balancer")]
     database.activities.create_index([("start_time", ASCENDING)])
     database.activities.create_index([("updated_at", DESCENDING)])
-    database.registrations.create_index([("activity_id", ASCENDING), ("contact", ASCENDING)], unique=True)
     database.categories.create_index("name", unique=True)
     database.users.create_index("username", unique=True)
     if database.categories.count_documents({}) == 0:
@@ -256,6 +242,7 @@ async def lifespan(app: FastAPI):
                 "password_hash": password_hasher.hash(admin_password),
                 "role": "admin",
                 "disabled": False,
+                "registered_activities": [],
                 "created_at": datetime.now(timezone.utc),
             }
         )
@@ -283,6 +270,7 @@ def register(payload: CredentialsInput, users: Users) -> dict:
         "password_hash": password_hasher.hash(payload.password),
         "role": "user",
         "disabled": False,
+        "registered_activities": [],
         "created_at": datetime.now(timezone.utc),
     }
     try:
@@ -310,8 +298,16 @@ def current_user(user: CurrentUser) -> dict:
     return public_user(user)
 
 
+@app.get("/api/auth/activities")
+def my_activities(user: CurrentUser, activities: Activities) -> list[dict]:
+    return [serialize_activity(activity, public=True) for activity in activities.find(
+        {"_id": {"$in": user.get("registered_activities", [])}}
+    ).sort("start_time", ASCENDING)]
+
+
 @app.post("/api/auth/logout", status_code=status.HTTP_204_NO_CONTENT)
-def logout(request: Request, response: Response) -> Response:
+def logout(request: Request) -> Response:
+    response = Response(status_code=status.HTTP_204_NO_CONTENT)
     clear_session(response, request)
     return response
 
@@ -412,20 +408,23 @@ def get_activity(activity_id: str, _: AdminUser, activities: Activities) -> dict
 
 
 @app.post("/api/public/activities/{activity_id}/register", status_code=status.HTTP_201_CREATED)
-def register_activity(activity_id: str, payload: RegistrationInput, request: Request) -> dict:
+def register_activity(activity_id: str, user: CurrentUser, activities: Activities, users: Users) -> dict:
     activity_id_obj = object_id_or_404(activity_id)
-    activity = request.app.state.database.activities.find_one({"_id": activity_id_obj})
+    activity = activities.find_one({"_id": activity_id_obj})
     if activity is None:
         raise HTTPException(status_code=404, detail="活动不存在")
-    if activity["status"] != "报名中" or activity["end_time"] <= datetime.now(timezone.utc):
+    if activity["status"] != "报名中" or activity["end_time"] <= datetime.now(timezone.utc).replace(tzinfo=None):
         raise HTTPException(status_code=409, detail="该活动暂不接受报名")
-    registrations = request.app.state.database.registrations
-    if registrations.count_documents({"activity_id": activity_id_obj}) >= activity["capacity"]:
+    if activity_id_obj in user.get("registered_activities", []):
+        raise HTTPException(status_code=409, detail="你已报名该活动")
+    if users.count_documents({"registered_activities": activity_id_obj}) >= activity["capacity"]:
         raise HTTPException(status_code=409, detail="活动名额已满")
-    try:
-        registrations.insert_one({"activity_id": activity_id_obj, **payload.model_dump(), "created_at": datetime.now(timezone.utc)})
-    except DuplicateKeyError:
-        raise HTTPException(status_code=409, detail="该联系方式已报名") from None
+    result = users.update_one(
+        {"_id": user["_id"], "registered_activities": {"$ne": activity_id_obj}},
+        {"$addToSet": {"registered_activities": activity_id_obj}},
+    )
+    if not result.modified_count:
+        raise HTTPException(status_code=409, detail="你已报名该活动")
     return {
         "incentive_details": activity.get("incentive_details", ""),
         "incentive_images": activity.get("incentive_images", []),
@@ -559,6 +558,11 @@ def index() -> FileResponse:
 @app.get("/login", include_in_schema=False)
 def login_page() -> FileResponse:
     return FileResponse(LOGIN_FILE)
+
+
+@app.get("/space", include_in_schema=False)
+def member_space() -> FileResponse:
+    return FileResponse(BASE_DIR / "static" / "space.html")
 
 
 @app.get("/admin", include_in_schema=False)

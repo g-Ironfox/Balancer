@@ -44,56 +44,98 @@ function showDetail(item) {
     addText(content, 'h3', 'detail-incentive-title', '活动激励');
     addText(content, 'p', 'detail-description detail-incentive', item.incentive);
   }
-  if (item.status === '报名中') {
-    const form = document.createElement('form');
-    form.className = 'registration-form';
-    const name = document.createElement('input');
-    name.placeholder = '姓名';
-    name.setAttribute('aria-label', '姓名');
-    name.maxLength = 50;
-    name.required = true;
-    const contact = document.createElement('input');
-    contact.placeholder = '联系方式';
-    contact.setAttribute('aria-label', '联系方式');
-    contact.maxLength = 100;
-    contact.required = true;
-    const submit = addText(form, 'button', 'registration-submit', '报名活动');
-    submit.type = 'submit';
-    const message = addText(form, 'p', 'registration-message', '');
-    form.prepend(name, contact);
-    form.addEventListener('submit', async (event) => {
-      event.preventDefault();
-      submit.disabled = true;
+  const canRegister = item.status === '报名中' && new Date(item.end_time).getTime() > Date.now();
+  const isExpiredRegistration = item.status === '报名中' && !canRegister;
+  const registerButton = addText(content, 'button', 'registration-submit registration-entry',
+    isExpiredRegistration ? '活动已结束' : canRegister ? '报名' : '无法报名');
+  registerButton.type = 'button';
+  registerButton.disabled = !canRegister;
+  if (!canRegister) {
+    fetch('/api/auth/activities').then((response) => response.ok ? response.json() : []).then((activities) => {
+      if (registerButton.isConnected && activities.some((activity) => activity.id === item.id)) {
+        registerButton.textContent = '已报名';
+      }
+    }).catch(() => {});
+  }
+  if (canRegister) {
+    const message = addText(content, 'p', 'registration-message', '');
+    const link = document.createElement('a');
+    link.className = 'registration-submit registration-entry';
+    link.textContent = '报名';
+    link.href = '/login';
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    const showLoginLink = () => {
+      registerButton.replaceWith(link);
+    };
+    showLoginLink();
+    const checkSession = async () => {
+      try {
+        const session = await fetch('/api/auth/me');
+        if (session.status === 401) {
+          if (registerButton.isConnected) showLoginLink();
+          return;
+        }
+        if (!session.ok) return;
+        const response = await fetch('/api/auth/activities');
+        if (!response.ok) return;
+        const activities = await response.json();
+        if (!link.isConnected && !registerButton.isConnected) return;
+        const registered = activities.some((activity) => activity.id === item.id);
+        registerButton.textContent = registered ? '已报名' : '报名';
+        registerButton.disabled = registered;
+        if (link.isConnected) link.replaceWith(registerButton);
+      } catch {
+      }
+    };
+    checkSession();
+    const onFocus = () => { if (activityDetail.open) checkSession(); };
+    window.addEventListener('focus', onFocus);
+    activityDetail.addEventListener('close', () => window.removeEventListener('focus', onFocus), { once: true });
+    registerButton.addEventListener('click', async () => {
+      registerButton.disabled = true;
       message.textContent = '';
       try {
+        const session = await fetch('/api/auth/me');
+        if (session.status === 401) {
+          showLoginLink();
+          message.textContent = '请点击报名登录后重试。';
+          return;
+        }
+        if (!session.ok) throw new Error('登录状态获取失败，请重试。');
         const response = await fetch(`/api/public/activities/${item.id}/register`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: name.value.trim(), contact: contact.value.trim() }),
         });
-        const result = await response.json();
+        if (response.status === 401) {
+          showLoginLink();
+          message.textContent = '登录已过期，请点击报名重新登录。';
+          return;
+        }
+        const result = response.headers.get('content-type')?.includes('application/json')
+          ? await response.json() : {};
         if (!response.ok) throw new Error(typeof result.detail === 'string' ? result.detail : '报名失败，请重试。');
-        form.replaceChildren();
-        addText(form, 'p', 'registration-message', '报名成功');
+        registerButton.textContent = '已报名';
+        registerButton.disabled = true;
+        message.textContent = '报名成功';
         if (result.incentive_details) {
-          addText(form, 'h3', 'detail-incentive-title', '领取激励');
-          addText(form, 'p', 'detail-description detail-incentive', result.incentive_details);
+          addText(content, 'h3', 'detail-incentive-title', '领取激励');
+          addText(content, 'p', 'detail-description detail-incentive', result.incentive_details);
         }
         const incentiveImages = (result.incentive_images || []).filter(safeImage);
-        if (incentiveImages.length && !result.incentive_details) addText(form, 'h3', 'detail-incentive-title', '领取激励');
+        if (incentiveImages.length && !result.incentive_details) addText(content, 'h3', 'detail-incentive-title', '领取激励');
         for (const incentiveImageUrl of incentiveImages) {
           const incentiveImage = document.createElement('img');
           incentiveImage.src = incentiveImageUrl;
           incentiveImage.alt = '领取激励图片';
           incentiveImage.className = 'detail-incentive-image';
-          form.append(incentiveImage);
+          content.append(incentiveImage);
         }
       } catch (error) {
         message.textContent = error.message;
-        submit.disabled = false;
+      } finally {
+        if (registerButton.textContent !== '已报名') registerButton.disabled = false;
       }
     });
-    content.append(form);
   }
   activityDetail.showModal();
 }

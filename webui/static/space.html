@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>我的空间 | Maker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/space.css">
+  <link rel="stylesheet" href="/static/space-activities.css">
+  <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js" defer></script>
+  <script src="/static/space.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="/" aria-label="Maker 首页">m<span>✳</span></a>
+    <nav aria-label="页面导航"><a href="/">社团首页</a><button id="logout" type="button">退出登录</button></nav>
+  </header>
+  <main class="workspace" hidden>
+    <div class="heading"><p class="eyebrow">MAKER CLUB / MEMBER SPACE</p><h1>我的空间</h1></div>
+    <section class="identity" aria-label="社员信息">
+      <span class="avatar" id="avatar" aria-hidden="true"></span>
+      <div><h2 id="username"></h2><p>社团成员</p></div>
+    </section>
+    <div class="space-links">
+      <a href="/#activities"><i data-lucide="calendar-days" aria-hidden="true"></i><span>社团活动</span><i data-lucide="arrow-up-right" aria-hidden="true"></i></a>
+      <a id="admin-link" href="/admin" hidden><i data-lucide="layout-dashboard" aria-hidden="true"></i><span>活动管理</span><i data-lucide="arrow-up-right" aria-hidden="true"></i></a>
+    </div>
+    <div class="activity-timeline" aria-label="我的活动时间轴">
+      <section class="timeline-stage timeline-past" aria-labelledby="past-title">
+        <div class="timeline-inner">
+          <div class="timeline-heading"><div><p class="timeline-label">PAST · HISTORY</p><h2 id="past-title">已结束</h2></div><button id="past-toggle" class="timeline-toggle" type="button" aria-expanded="false" aria-controls="past-activities" title="展开已结束活动"><i data-lucide="chevron-down" aria-hidden="true"></i><span>展开</span></button></div>
+          <ul id="past-activities" class="member-list" hidden><li class="empty">正在加载…</li></ul>
+        </div>
+      </section>
+      <section class="timeline-stage timeline-now" aria-labelledby="ongoing-title">
+        <div class="timeline-inner">
+          <p class="timeline-label">NOW · IN PROGRESS</p><h2 id="ongoing-title">正在进行</h2>
+          <ul id="ongoing-activities" class="member-list"><li class="empty">正在加载…</li></ul>
+        </div>
+      </section>
+      <section class="timeline-stage timeline-next" aria-labelledby="upcoming-title">
+        <div class="timeline-inner">
+          <p class="timeline-label">NEXT · TO DO</p><h2 id="upcoming-title">即将举行</h2>
+          <ul id="upcoming-activities" class="member-list"><li class="empty">正在加载…</li></ul>
+        </div>
+      </section>
+    </div>
+    <p id="status" role="status"></p>
+  </main>
+</body>
+</html>

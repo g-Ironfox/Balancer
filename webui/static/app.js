@@ -130,6 +130,10 @@ function statusClass(value) {
   return ({ "报名中": "status-open", "进行中": "status-live", "草稿": "status-draft", "已结束": "status-done", "已取消": "status-cancelled" })[value] || "status-draft";
 }
 
+  function isExpiredRegistration(item) {
+    return item.status === "报名中" && new Date(item.end_time).getTime() <= Date.now();
+  }
+
 function renderRows() {
   const filtered = state.category ? state.activities.filter((item) => item.category === state.category) : state.activities;
   rows.innerHTML = filtered.map((item) => `
@@ -139,7 +143,7 @@ function renderRows() {
       <td><div class="date-primary">${formatDate(item.start_time)}</div><div class="date-secondary">${formatTime(item.start_time)} - ${formatTime(item.end_time)}</div></td>
       <td><div class="location-cell" title="${escapeHtml(item.location)}">${escapeHtml(item.location)}</div></td>
       <td><span class="capacity-cell">${item.capacity} 人</span></td>
-      <td><span class="status-pill ${statusClass(item.status)}">${escapeHtml(item.status)}</span></td>
+      <td><span class="status-pill ${statusClass(item.status)}">${escapeHtml(item.status)}</span>${isExpiredRegistration(item) ? '<span class="status-warning">已过期，请更新状态</span>' : ""}</td>
       <td><div class="row-actions"><button class="row-action" data-action="edit" data-id="${item.id}" title="编辑活动" aria-label="编辑 ${escapeHtml(item.title)}">✎</button><button class="row-action delete" data-action="delete" data-id="${item.id}" title="删除活动" aria-label="删除 ${escapeHtml(item.title)}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle"><path d="M3 6h18M8 6V4h8v2m3 0-1 14H6L5 6m5 4v7m4-7v7"/></svg></button></div></td>
     </tr>`).join("");
   document.querySelector("#result-count").textContent = `共 ${state.total} 条`;
@@ -441,8 +445,24 @@ document.querySelector("#theme-toggle").addEventListener("click", () => {
   applyTheme(theme);
 });
 document.querySelector("#logout-button").addEventListener("click", async () => {
-  await fetch("/api/auth/logout", { method: "POST" });
-  window.location.href = "/login";
+  try {
+    const response = await fetch("/api/auth/logout", { method: "POST" });
+    if (!response.ok) {
+      if (response.status === 401) {
+        window.location.replace("/");
+        return;
+      }
+      showToast("退出未完成，请重试");
+      return;
+    }
+  } catch {
+    const session = await fetch("/api/auth/me").catch(() => null);
+    if (!session || session.status !== 401) {
+      showToast("无法确认退出状态，请重试");
+      return;
+    }
+  }
+  window.location.replace("/");
 });
 document.querySelector("#previous-page").addEventListener("click", () => { state.page -= 1; loadActivities(); });
 document.querySelector("#next-page").addEventListener("click", () => { state.page += 1; loadActivities(); });
