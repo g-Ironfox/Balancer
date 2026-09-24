@@ -1,0 +1,50 @@
+services:
+  webui:
+    build: ./webui
+    container_name: webui_balancer
+    ports:
+      - "8661:8000"
+    depends_on:
+      - redis
+      - mongodb
+    environment:
+      - MONGO_HOST=${MONGO_HOST}
+      - MONGO_PORT=${MONGO_PORT}
+      - MONGO_USER=${MONGO_USER}
+      - MONGO_PASS=${MONGO_PASS}
+      - MONGO_DB=${MONGO_DB}
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+      - TZ=${TZ}
+    volumes:
+      - ./data/uploads:/app/uploads
+    networks:
+      - balancer_net
+    
+  redis:
+    image: redis:7-alpine
+    container_name: redis_balancer
+    ports:
+      - "6380:6379"               # 可选，暴露给宿主机
+    volumes:
+      - ./data/redis:/data        # Redis 持久化
+    command: redis-server --appendonly yes
+    networks:
+      - balancer_net
+
+  mongodb:
+    image: mongo:8
+    container_name: mongo_balancer
+    ports:
+      - "27007:27017"
+    volumes:
+      - ./data/mongo:/data/db     # MongoDB 数据持久化
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_USER}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASS}
+    networks:
+      - balancer_net
+
+networks:
+  balancer_net:
+    driver: bridge

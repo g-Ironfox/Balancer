@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#080b0e" />
+    <meta name="description" content="Maker 社团。好奇、探索、动手，把想法变成现实。" />
+    <title>maker — 把想法，变成现实</title>
+    <link rel="stylesheet" href="/makerpage/style.css" />
+    <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js" defer></script>
+    <script src="/makerpage/main.js" defer></script>
+    <script src="/makerpage/activities.js" defer></script>
+  </head>
+  <body>
+    <main>
+      <section class="hero" aria-label="Maker 社团首页">
+        <div id="universe" aria-hidden="true"></div>
+        <header>
+          <a class="brand" href="/" aria-label="Maker 首页">m<span class="brand-dot">✳</span></a>
+          <span class="club-label">MAKER CLUB</span>
+          <nav class="home-nav" aria-label="页面导航"><a class="nav-link" href="#activities">活动 <i data-lucide="arrow-up-right"></i></a><a class="nav-link" href="#about">关于我们 <i data-lucide="arrow-up-right"></i></a></nav>
+        </header>
+        <div class="title-wrap">
+          <h1 aria-label="maker"><span>mak</span><span id="galaxy-letter" aria-hidden="true"><span class="fallback-letter">e</span></span><span>r</span></h1>
+          <p class="manifesto">每一个想法，都有自己的宇宙。</p>
+        </div>
+        <div class="hero-footer">
+          <a class="explore" href="#activities"><span class="scroll-line"></span>好奇心，从这里开始 <i data-lucide="arrow-down"></i></a>
+          <div class="scene-controls">
+            <span class="live-label"><span></span> A LITTLE UNIVERSE</span>
+            <label class="speed-control" for="speed">
+              <i data-lucide="gauge"></i>
+              <input id="speed" type="range" min="0.25" max="1" value="0.55" step="0.05" aria-label="星系运动速度" title="星系运动速度" />
+            </label>
+            <button id="pause" type="button" aria-label="暂停动画" title="暂停动画" aria-pressed="false"><i data-lucide="pause"></i></button>
+            <button id="reset" type="button" aria-label="重置星系" title="重置星系"><i data-lucide="rotate-ccw"></i></button>
+          </div>
+        </div>
+      </section>
+      <section id="activities" class="activities" aria-labelledby="activities-title">
+        <div class="section-label"><span>01 / WHAT'S ON</span><span>一起把想法做出来。</span></div>
+        <div class="activities-heading"><div><h2 id="activities-title">正在发生</h2><p>下一次相遇，从这里开始。</p></div><div class="activity-tabs" role="group" aria-label="活动时间"><button type="button" class="active" data-view="upcoming" aria-pressed="true">近期活动</button><button type="button" data-view="past" aria-pressed="false">往期活动</button></div></div>
+        <div id="activity-list" class="activity-list" aria-live="polite"><p class="activity-message">正在加载活动…</p></div>
+        <div class="activity-pagination" id="activity-pagination" hidden><button type="button" id="activity-prev" aria-label="上一页" title="上一页"><i data-lucide="arrow-left"></i></button><span id="activity-page"></span><button type="button" id="activity-next" aria-label="下一页" title="下一页"><i data-lucide="arrow-right"></i></button></div>
+      </section>
+      <section id="about" class="about">
+        <div class="section-label"><span>02 / ABOUT US</span><span>想象没有边界，创造不止于此。</span></div>
+        <div class="about-content"><h2>把想法，<br />变成现实。</h2><div><p>我们是一群喜欢追问「为什么」，<br />也愿意动手试试「能不能」的人。</p><p>从第一行代码，到第一个原型。<br />在 Maker，让好奇心找到同伴，<br />让脑海里的火花，成为真实的作品。</p><span class="about-signature">STAY CURIOUS. MAKE SOMETHING.</span></div></div>
+        <footer><span>maker / 创客社团</span><a href="#">回到星系 <i data-lucide="arrow-up-right"></i></a></footer>
+      </section>
+    </main>
+    <dialog id="activity-detail" class="activity-detail" aria-labelledby="detail-title"><button type="button" id="detail-close" class="detail-close" aria-label="关闭详情" title="关闭详情"><i data-lucide="x"></i></button><div id="detail-content"></div></dialog>
+  </body>
+</html>
