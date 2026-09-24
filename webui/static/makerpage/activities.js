@@ -4,6 +4,7 @@ const pagination = document.querySelector('#activity-pagination');
 const tabs = document.querySelectorAll('.activity-tabs button');
 const activityState = { view: 'upcoming', page: 1, total: 0 };
 const pageSize = 6;
+let isInitialLoad = true;
 
 function activityDate(value) {
   return new Intl.DateTimeFormat('zh-CN', {
@@ -142,10 +143,12 @@ async function loadActivities() {
     const response = await fetch(`/api/public/activities?${params}`);
     if (!response.ok) throw new Error('请求失败');
     const result = await response.json();
-    if (activityState.view === 'upcoming' && activityState.page === 1 && result.total === 0) {
+    if (isInitialLoad && activityState.view === 'upcoming' && result.total === 0) {
+      isInitialLoad = false;
       document.querySelector('.activity-tabs [data-view="past"]').click();
       return;
     }
+    isInitialLoad = false;
     activityState.total = result.total;
     renderActivities(result.items);
     pagination.hidden = result.total <= pageSize;

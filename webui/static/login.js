@@ -57,3 +57,16 @@ switchButton.addEventListener("click", () => {
 });
 form.addEventListener("submit", submitAuth);
 updateMode();
+
+async function redirectSignedInAdmin() {
+  try {
+    const response = await fetch("/api/auth/me");
+    if (response.ok && (await response.json()).role === "admin") {
+      window.location.replace("/admin");
+    }
+  } catch {
+    // Keep the login form available if session lookup fails.
+  }
+}
+
+redirectSignedInAdmin();

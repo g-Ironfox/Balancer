@@ -22,6 +22,7 @@ async function requireAdmin() {
   }
   const avatar = document.querySelector("#profile-avatar");
   if (avatar) avatar.textContent = user.username.slice(0, 1).toUpperCase();
+  document.querySelector("#profile-username").textContent = user.username;
 }
 
 function applyTheme(theme) {
