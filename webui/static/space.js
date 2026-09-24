@@ -54,16 +54,19 @@ async function loadRegisteredActivities() {
   if (!response.ok) throw new Error("已报名活动加载失败，请稍后刷新重试。");
   const activities = await response.json();
   const now = Date.now();
-  renderActivityList(document.querySelector("#upcoming-activities"),
-    activities.filter((activity) => activity.status !== "已取消" && new Date(activity.start_time).getTime() > now),
+  const upcoming = activities.filter((activity) => activity.status !== "已取消" && new Date(activity.start_time).getTime() > now)
+    .sort((left, right) => new Date(left.start_time) - new Date(right.start_time));
+  const ongoing = activities.filter((activity) => activity.status !== "已取消"
+      && new Date(activity.start_time).getTime() <= now && new Date(activity.end_time).getTime() > now)
+    .sort((left, right) => new Date(left.start_time) - new Date(right.start_time));
+  const past = activities.filter((activity) => activity.status === "已结束"
+      || (activity.status !== "已取消" && new Date(activity.end_time).getTime() <= now))
+    .sort((left, right) => new Date(right.end_time) - new Date(left.end_time));
+  renderActivityList(document.querySelector("#upcoming-activities"), upcoming,
     "目前没有即将举行的已报名活动。");
-  renderActivityList(document.querySelector("#ongoing-activities"),
-    activities.filter((activity) => activity.status !== "已取消"
-      && new Date(activity.start_time).getTime() <= now && new Date(activity.end_time).getTime() > now),
+  renderActivityList(document.querySelector("#ongoing-activities"), ongoing,
     "目前没有正在进行的已报名活动。");
-  renderActivityList(document.querySelector("#past-activities"),
-    activities.filter((activity) => activity.status === "已结束"
-      || (activity.status !== "已取消" && new Date(activity.end_time).getTime() <= now)),
+  renderActivityList(document.querySelector("#past-activities"), past,
     "目前没有已结束的报名活动。");
 }
 
