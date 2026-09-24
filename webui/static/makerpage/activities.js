@@ -26,8 +26,8 @@ function safeImage(value) {
 function showDetail(item) {
   const content = document.querySelector('#detail-content');
   content.replaceChildren();
-  const imageUrl = safeImage(item.image);
-  if (imageUrl) {
+  for (const imageUrl of item.images || []) {
+    if (!safeImage(imageUrl)) continue;
     const image = document.createElement('img');
     image.src = imageUrl;
     image.alt = '';
@@ -39,6 +39,61 @@ function showDetail(item) {
   addText(content, 'p', 'detail-meta', `${activityDate(item.start_time)} — ${activityDate(item.end_time)}`);
   addText(content, 'p', 'detail-meta', `${item.location} · 名额 ${item.capacity} 人`);
   addText(content, 'p', 'detail-description', item.description || '暂无活动介绍。');
+  if (item.incentive) {
+    addText(content, 'h3', 'detail-incentive-title', '活动激励');
+    addText(content, 'p', 'detail-description detail-incentive', item.incentive);
+  }
+  if (item.status === '报名中') {
+    const form = document.createElement('form');
+    form.className = 'registration-form';
+    const name = document.createElement('input');
+    name.placeholder = '姓名';
+    name.setAttribute('aria-label', '姓名');
+    name.maxLength = 50;
+    name.required = true;
+    const contact = document.createElement('input');
+    contact.placeholder = '联系方式';
+    contact.setAttribute('aria-label', '联系方式');
+    contact.maxLength = 100;
+    contact.required = true;
+    const submit = addText(form, 'button', 'registration-submit', '报名活动');
+    submit.type = 'submit';
+    const message = addText(form, 'p', 'registration-message', '');
+    form.prepend(name, contact);
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      submit.disabled = true;
+      message.textContent = '';
+      try {
+        const response = await fetch(`/api/public/activities/${item.id}/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: name.value.trim(), contact: contact.value.trim() }),
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(typeof result.detail === 'string' ? result.detail : '报名失败，请重试。');
+        form.replaceChildren();
+        addText(form, 'p', 'registration-message', '报名成功');
+        if (result.incentive_details) {
+          addText(form, 'h3', 'detail-incentive-title', '领取激励');
+          addText(form, 'p', 'detail-description detail-incentive', result.incentive_details);
+        }
+        const incentiveImages = (result.incentive_images || []).filter(safeImage);
+        if (incentiveImages.length && !result.incentive_details) addText(form, 'h3', 'detail-incentive-title', '领取激励');
+        for (const incentiveImageUrl of incentiveImages) {
+          const incentiveImage = document.createElement('img');
+          incentiveImage.src = incentiveImageUrl;
+          incentiveImage.alt = '领取激励图片';
+          incentiveImage.className = 'detail-incentive-image';
+          form.append(incentiveImage);
+        }
+      } catch (error) {
+        message.textContent = error.message;
+        submit.disabled = false;
+      }
+    });
+    content.append(form);
+  }
   activityDetail.showModal();
 }
 
@@ -51,7 +106,7 @@ function renderActivities(items) {
   for (const item of items) {
     const card = document.createElement('article');
     card.className = 'activity-card';
-    const imageUrl = safeImage(item.image);
+    const imageUrl = safeImage(item.images?.[0]);
     const visual = document.createElement('div');
     visual.className = 'activity-visual';
     if (imageUrl) {
@@ -87,6 +142,10 @@ async function loadActivities() {
     const response = await fetch(`/api/public/activities?${params}`);
     if (!response.ok) throw new Error('请求失败');
     const result = await response.json();
+    if (activityState.view === 'upcoming' && activityState.page === 1 && result.total === 0) {
+      document.querySelector('.activity-tabs [data-view="past"]').click();
+      return;
+    }
     activityState.total = result.total;
     renderActivities(result.items);
     pagination.hidden = result.total <= pageSize;

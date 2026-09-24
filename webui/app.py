@@ -13,6 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
 from pymongo import ASCENDING, DESCENDING, MongoClient
 from pymongo.collection import Collection
+from pymongo.errors import DuplicateKeyError
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -36,7 +37,10 @@ class ActivityInput(BaseModel):
     capacity: int = Field(ge=1, le=100000)
     status: Literal["草稿", "报名中", "进行中", "已结束", "已取消"] = "草稿"
     description: str = Field(default="", max_length=1000)
-    image: str = Field(default="", max_length=200)
+    incentive: str = Field(default="", max_length=1000)
+    incentive_details: str = Field(default="", max_length=2000)
+    incentive_images: list[str] = Field(default_factory=list)
+    images: list[str] = Field(default_factory=list)
 
     @field_validator("title", "location", "category")
     @classmethod
@@ -46,10 +50,23 @@ class ActivityInput(BaseModel):
             raise ValueError("不能为空")
         return value
 
-    @field_validator("description")
+    @field_validator("description", "incentive", "incentive_details")
     @classmethod
     def strip_description(cls, value: str) -> str:
         return value.strip()
+
+
+class RegistrationInput(BaseModel):
+    name: str = Field(min_length=1, max_length=50)
+    contact: str = Field(min_length=1, max_length=100)
+
+    @field_validator("name", "contact")
+    @classmethod
+    def strip_text(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("不能为空")
+        return value
 
 
 class CategoryInput(BaseModel):
@@ -71,8 +88,8 @@ class ActivityPage(BaseModel):
     page_size: int
 
 
-def serialize_activity(document: dict) -> dict:
-    return {
+def serialize_activity(document: dict, public: bool = False) -> dict:
+    result = {
         "id": str(document["_id"]),
         "title": document["title"],
         "category": document["category"],
@@ -82,10 +99,15 @@ def serialize_activity(document: dict) -> dict:
         "capacity": document["capacity"],
         "status": document["status"],
         "description": document.get("description", ""),
-        "image": document.get("image", ""),
+        "incentive": document.get("incentive", ""),
+        "images": document.get("images", []),
         "created_at": document["created_at"],
         "updated_at": document["updated_at"],
     }
+    if not public:
+        result["incentive_details"] = document.get("incentive_details", "")
+        result["incentive_images"] = document.get("incentive_images", [])
+    return result
 
 
 def get_collection(request: Request) -> Collection:
@@ -129,6 +151,7 @@ async def lifespan(app: FastAPI):
     database = client[os.getenv("MONGO_DB", "balancer")]
     database.activities.create_index([("start_time", ASCENDING)])
     database.activities.create_index([("updated_at", DESCENDING)])
+    database.registrations.create_index([("activity_id", ASCENDING), ("contact", ASCENDING)], unique=True)
     database.categories.create_index("name", unique=True)
     if database.categories.count_documents({}) == 0:
         seeded_at = datetime.now(timezone.utc)
@@ -201,7 +224,7 @@ def public_activities(
         .limit(page_size)
     )
     return ActivityPage(
-        items=[serialize_activity(item) for item in cursor],
+        items=[serialize_activity(item, public=True) for item in cursor],
         total=total,
         page=page,
         page_size=page_size,
@@ -235,6 +258,27 @@ def get_activity(activity_id: str, activities: Activities) -> dict:
     if document is None:
         raise HTTPException(status_code=404, detail="活动不存在")
     return serialize_activity(document)
+
+
+@app.post("/api/public/activities/{activity_id}/register", status_code=status.HTTP_201_CREATED)
+def register_activity(activity_id: str, payload: RegistrationInput, request: Request) -> dict:
+    activity_id_obj = object_id_or_404(activity_id)
+    activity = request.app.state.database.activities.find_one({"_id": activity_id_obj})
+    if activity is None:
+        raise HTTPException(status_code=404, detail="活动不存在")
+    if activity["status"] != "报名中" or activity["end_time"] <= datetime.now(timezone.utc):
+        raise HTTPException(status_code=409, detail="该活动暂不接受报名")
+    registrations = request.app.state.database.registrations
+    if registrations.count_documents({"activity_id": activity_id_obj}) >= activity["capacity"]:
+        raise HTTPException(status_code=409, detail="活动名额已满")
+    try:
+        registrations.insert_one({"activity_id": activity_id_obj, **payload.model_dump(), "created_at": datetime.now(timezone.utc)})
+    except DuplicateKeyError:
+        raise HTTPException(status_code=409, detail="该联系方式已报名") from None
+    return {
+        "incentive_details": activity.get("incentive_details", ""),
+        "incentive_images": activity.get("incentive_images", []),
+    }
 
 
 @app.post("/api/activities", status_code=status.HTTP_201_CREATED)

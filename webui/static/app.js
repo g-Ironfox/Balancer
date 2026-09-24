@@ -62,10 +62,44 @@ async function uploadImage(formData) {
   return response.json();
 }
 
-function setImagePreview(url) {
-  document.querySelector("#image-url").value = url || "";
-  document.querySelector("#image-preview").hidden = !url;
-  document.querySelector("#image-preview-img").src = url || "";
+let images = [];
+let incentiveImages = [];
+
+function renderImagePreview(selector, urls, label, onRemove) {
+  const preview = document.querySelector(selector);
+  preview.replaceChildren();
+  preview.hidden = urls.length === 0;
+  urls.forEach((url, index) => {
+    const item = document.createElement("div");
+    item.className = "image-preview-item";
+    const image = document.createElement("img");
+    image.src = url;
+    image.alt = `${label} ${index + 1}`;
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "text-button";
+    remove.textContent = "移除";
+    remove.setAttribute("aria-label", `移除${label} ${index + 1}`);
+    remove.addEventListener("click", () => onRemove(index));
+    item.append(image, remove);
+    preview.append(item);
+  });
+}
+
+function setImagePreview(urls) {
+  images = [...urls];
+  renderImagePreview("#image-preview", images, "宣传图", (index) => {
+    images.splice(index, 1);
+    setImagePreview(images);
+  });
+}
+
+function setIncentiveImagePreview(urls) {
+  incentiveImages = [...urls];
+  renderImagePreview("#incentive-image-preview", incentiveImages, "领取图片", (index) => {
+    incentiveImages.splice(index, 1);
+    setIncentiveImagePreview(incentiveImages);
+  });
 }
 
 function updateMetrics(summary) {
@@ -84,7 +118,7 @@ function renderRows() {
   const filtered = state.category ? state.activities.filter((item) => item.category === state.category) : state.activities;
   rows.innerHTML = filtered.map((item) => `
     <tr>
-      <td><div class="activity-cell">${item.image ? `<img class="activity-thumb" src="${escapeHtml(item.image)}" alt="">` : ""}<div><div class="activity-name" title="${escapeHtml(item.title)}">${escapeHtml(item.title)}</div><div class="activity-id">ACT-${escapeHtml(item.id.slice(-6).toUpperCase())}</div></div></div></td>
+      <td><div class="activity-cell">${item.images?.[0] ? `<img class="activity-thumb" src="${escapeHtml(item.images[0])}" alt="">` : ""}<div><div class="activity-name" title="${escapeHtml(item.title)}">${escapeHtml(item.title)}</div><div class="activity-id">ACT-${escapeHtml(item.id.slice(-6).toUpperCase())}</div></div></div></td>
       <td><span class="category-tag">${escapeHtml(item.category)}</span></td>
       <td><div class="date-primary">${formatDate(item.start_time)}</div><div class="date-secondary">${formatTime(item.start_time)} - ${formatTime(item.end_time)}</div></td>
       <td><div class="location-cell" title="${escapeHtml(item.location)}">${escapeHtml(item.location)}</div></td>
@@ -230,7 +264,8 @@ function openCreateDialog() {
   document.querySelector("#activity-id").value = "";
   document.querySelector("#activity-status").value = "草稿";
   document.querySelector("#capacity").value = 30;
-  setImagePreview("");
+  setImagePreview([]);
+  setIncentiveImagePreview([]);
   document.querySelector("#dialog-title").textContent = "创建活动";
   document.querySelector("#save-button").textContent = "保存活动";
   document.querySelector("#dialog-error").textContent = "";
@@ -248,8 +283,12 @@ function openEditDialog(activity) {
   document.querySelector("#end-time").value = localInputValue(activity.end_time);
   document.querySelector("#capacity").value = activity.capacity;
   document.querySelector("#description").value = activity.description || "";
+  document.querySelector("#incentive").value = activity.incentive || "";
+  document.querySelector("#incentive-details").value = activity.incentive_details || "";
   document.querySelector("#image-file").value = "";
-  setImagePreview(activity.image || "");
+  setImagePreview(activity.images || []);
+  document.querySelector("#incentive-image-file").value = "";
+  setIncentiveImagePreview(activity.incentive_images || []);
   document.querySelector("#dialog-title").textContent = "编辑活动";
   document.querySelector("#save-button").textContent = "保存修改";
   document.querySelector("#dialog-error").textContent = "";
@@ -289,7 +328,10 @@ form.addEventListener("submit", async (event) => {
     end_time: new Date(document.querySelector("#end-time").value).toISOString(),
     capacity: Number(document.querySelector("#capacity").value),
     description: document.querySelector("#description").value.trim(),
-    image: document.querySelector("#image-url").value,
+    incentive: document.querySelector("#incentive").value.trim(),
+    incentive_details: document.querySelector("#incentive-details").value.trim(),
+    incentive_images: incentiveImages,
+    images,
   };
   if (new Date(payload.end_time) <= new Date(payload.start_time)) {
     document.querySelector("#dialog-error").textContent = "结束时间必须晚于开始时间。";
@@ -319,23 +361,44 @@ document.querySelector("#close-dialog").addEventListener("click", () => dialog.c
 document.querySelector("#cancel-dialog").addEventListener("click", () => dialog.close());
 document.querySelector("#refresh-button").addEventListener("click", refreshAll);
 document.querySelector("#image-file").addEventListener("change", async (event) => {
-  const file = event.target.files[0];
-  if (!file) return;
-  const formData = new FormData();
-  formData.append("image", file);
+  const files = [...event.target.files];
+  if (!files.length) return;
   try {
-    const result = await uploadImage(formData);
-    setImagePreview(result.url);
+    const urls = [];
+    for (const file of files) {
+      const formData = new FormData();
+      formData.append("image", file);
+      const result = await uploadImage(formData);
+      urls.push(result.url);
+    }
+    setImagePreview([...images, ...urls]);
     document.querySelector("#dialog-error").textContent = "";
     showToast("宣传图已上传");
   } catch (error) {
     document.querySelector("#dialog-error").textContent = error.message || "上传失败";
+  } finally {
     event.target.value = "";
   }
 });
-document.querySelector("#remove-image").addEventListener("click", () => {
-  setImagePreview("");
-  document.querySelector("#image-file").value = "";
+document.querySelector("#incentive-image-file").addEventListener("change", async (event) => {
+  const files = [...event.target.files];
+  if (!files.length) return;
+  try {
+    const urls = [];
+    for (const file of files) {
+      const formData = new FormData();
+      formData.append("image", file);
+      const result = await uploadImage(formData);
+      urls.push(result.url);
+    }
+    setIncentiveImagePreview([...incentiveImages, ...urls]);
+    document.querySelector("#dialog-error").textContent = "";
+    showToast("领取图片已上传");
+  } catch (error) {
+    document.querySelector("#dialog-error").textContent = error.message || "上传失败";
+  } finally {
+    event.target.value = "";
+  }
 });
 document.querySelector("#manage-categories").addEventListener("click", openCategoryDialog);
 document.querySelector("#close-category").addEventListener("click", () => document.querySelector("#category-dialog").close());

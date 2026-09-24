@@ -58,7 +58,6 @@
     <form id="activity-form">
       <div class="dialog-heading"><div><div class="eyebrow">ACTIVITY DETAILS</div><h2 id="dialog-title">创建活动</h2></div><button type="button" class="close-button" id="close-dialog" aria-label="关闭">×</button></div>
       <input type="hidden" id="activity-id">
-      <input type="hidden" id="image-url">
       <div class="form-grid">
         <label class="field field-wide">活动名称<input id="title" name="title" maxlength="100" placeholder="例如：Arduino 入门工作坊" required></label>
         <label class="field">活动类别<select id="category" name="category" required></select></label>
@@ -68,8 +67,12 @@
         <label class="field">结束时间<input id="end-time" name="end_time" type="datetime-local" required></label>
         <label class="field">活动名额<input id="capacity" name="capacity" type="number" min="1" max="100000" value="30" required></label>
         <label class="field field-wide">活动介绍<textarea id="description" name="description" rows="3" maxlength="1000" placeholder="活动内容、所需元器件与工具、参与要求"></textarea></label>
-        <label class="field field-wide">宣传图<input id="image-file" type="file" accept="image/png,image/jpeg,image/webp,image/gif"><span class="field-note">支持 PNG / JPEG / WebP / GIF，最大 5 MB</span></label>
-        <div class="image-preview" id="image-preview" hidden><img id="image-preview-img" alt="宣传图预览"><button type="button" class="text-button" id="remove-image">移除图片</button></div>
+        <label class="field field-wide">宣传图<input id="image-file" type="file" multiple accept="image/png,image/jpeg,image/webp,image/gif"><span class="field-note">可多选，支持 PNG / JPEG / WebP / GIF，每张最大 5 MB</span></label>
+        <div class="image-preview" id="image-preview" hidden></div>
+        <label class="field field-wide">活动激励 · 激励项<textarea id="incentive" name="incentive" rows="2" maxlength="1000" placeholder="报名者可提前看到的激励内容"></textarea></label>
+        <label class="field field-wide">活动激励 · 领取详情<textarea id="incentive-details" name="incentive_details" rows="3" maxlength="2000" placeholder="报名成功后显示的领取方式与详细内容"></textarea></label>
+        <label class="field field-wide">领取图片<input id="incentive-image-file" type="file" multiple accept="image/png,image/jpeg,image/webp,image/gif"><span class="field-note">报名成功后显示，可多选，支持 PNG / JPEG / WebP / GIF，每张最大 5 MB</span></label>
+        <div class="image-preview" id="incentive-image-preview" hidden></div>
       </div>
       <div class="dialog-error" id="dialog-error" role="alert"></div>
       <div class="dialog-actions"><button type="button" class="secondary-button" id="cancel-dialog">取消</button><button class="primary-button" id="save-button" type="submit">保存活动</button></div>
