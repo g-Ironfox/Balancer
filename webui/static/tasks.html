@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f4f5f0">
+  <title>活动任务 | Maker 开源硬件社</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css">
+  <link rel="stylesheet" href="/static/tasks.css">
+</head>
+<body>
+  <aside class="sidebar">
+    <a class="brand" href="/space" aria-label="返回我的空间"><span class="brand-mark">M</span><span>Maker<span class="brand-caption">OPEN HARDWARE</span></span></a>
+    <div class="nav-label">工作空间</div>
+    <nav aria-label="主导航">
+      <a class="nav-item" href="/admin"><span class="nav-icon">▦</span>活动管理</a>
+      <a class="nav-item active" href="/admin/tasks"><span class="nav-icon">☷</span>活动任务</a>
+      <a class="nav-item muted" href="#members"><span class="nav-icon">♧</span>社团成员</a>
+      <a class="nav-item muted" href="#settings"><span class="nav-icon">⚙</span>设置</a>
+    </nav>
+    <div class="sidebar-bottom"><span class="profile-avatar" id="profile-avatar">M</span><div><strong id="profile-username"></strong><small>社团管理员</small></div><button class="more-button" aria-label="更多选项">···</button></div>
+  </aside>
+
+  <main class="main-content task-main">
+    <header class="topbar"><div class="breadcrumbs">工作空间 <span>/</span> <strong>活动任务</strong></div><div class="top-actions"><a class="mobile-task-link" href="/admin">活动管理</a><span class="today" id="today-label"></span><button class="theme-button" id="theme-toggle" type="button" title="切换暗色模式" aria-label="切换暗色模式">☾</button><button class="text-button" id="logout-button" type="button">退出</button></div></header>
+    <section class="page-heading task-page-heading">
+      <div><div class="eyebrow"><span class="eyebrow-dot"></span> ACTIVITY WORKFLOW</div><h1>活动任务</h1><p>为每场活动安排清晰的参与步骤，成员会在个人空间按活动查看待办。</p></div>
+    </section>
+
+    <section class="task-workspace" aria-label="活动任务编辑">
+      <div class="task-toolbar">
+        <label class="task-select-label">选择活动<select id="activity-select" disabled><option>正在载入活动…</option></select></label>
+        <span class="task-count" id="task-count"></span>
+      </div>
+      <div class="task-panel">
+        <div class="task-panel-heading"><div><p class="eyebrow">TASK CHECKLIST</p><h2 id="selected-activity-title">选择一场活动</h2><p id="selected-activity-meta">选择活动后开始配置任务。</p></div><button class="primary-button" id="save-tasks" type="button" disabled>保存任务</button></div>
+        <div id="task-rows" class="task-rows"></div>
+        <button class="add-task-button" id="add-task" type="button" disabled><span>+</span> 添加任务</button>
+        <p class="task-error" id="task-error" role="alert"></p>
+      </div>
+    </section>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </main>
+  <dialog id="task-editor" class="task-editor" aria-labelledby="editor-heading">
+    <form id="task-editor-form">
+      <div class="task-editor-heading"><div><p class="eyebrow">TASK DETAILS</p><h2 id="editor-heading">编辑任务</h2></div><button type="button" id="close-editor" class="task-editor-close" aria-label="关闭">×</button></div>
+      <label class="task-editor-field">任务标题<input id="editor-title" maxlength="100" required placeholder="例如：提交报名信息"></label>
+      <label class="task-editor-field">正文<textarea id="editor-description" maxlength="5000" rows="7" placeholder="填写具体步骤、说明或注意事项"></textarea></label>
+      <div class="task-editor-field"><span>任务图片</span><div id="editor-images" class="task-images"></div><label class="task-upload">＋ 添加图片<input id="editor-upload" type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple aria-label="为任务添加图片"></label></div>
+      <p id="editor-error" class="task-error" role="alert"></p>
+      <div class="task-editor-actions"><button type="button" id="cancel-editor" class="task-editor-cancel">取消</button><button id="confirm-editor" type="submit" class="primary-button">完成编辑</button></div>
+    </form>
+  </dialog>
+  <script src="/static/tasks.js" defer></script>
+</body>
+</html>

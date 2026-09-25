@@ -15,7 +15,8 @@
     <a class="brand" href="/space" aria-label="返回我的空间"><span class="brand-mark">M</span><span>Maker<span class="brand-caption">OPEN HARDWARE</span></span></a>
     <div class="nav-label">工作空间</div>
     <nav aria-label="主导航">
-      <a class="nav-item active" href="#activities"><span class="nav-icon">▦</span>活动管理<span class="nav-count" id="nav-count">0</span></a>
+      <a class="nav-item active" href="/admin"><span class="nav-icon">▦</span>活动管理<span class="nav-count" id="nav-count">0</span></a>
+      <a class="nav-item" href="/admin/tasks"><span class="nav-icon">☷</span>活动任务</a>
       <a class="nav-item muted" href="#members"><span class="nav-icon">♧</span>社团成员</a>
       <a class="nav-item muted" href="#settings"><span class="nav-icon">⚙</span>设置</a>
     </nav>
@@ -23,7 +24,7 @@
   </aside>
 
   <main class="main-content" id="activities">
-    <header class="topbar"><div class="breadcrumbs">工作空间 <span>/</span> <strong>活动管理</strong></div><div class="top-actions"><span class="today" id="today-label"></span><button class="theme-button" id="theme-toggle" type="button" title="切换暗色模式" aria-label="切换暗色模式">☾</button><button class="text-button logout-button" id="logout-button" type="button">退出</button></div></header>
+    <header class="topbar"><div class="breadcrumbs">工作空间 <span>/</span> <strong>活动管理</strong></div><div class="top-actions"><a class="mobile-task-link" href="/admin/tasks">活动任务</a><span class="today" id="today-label"></span><button class="theme-button" id="theme-toggle" type="button" title="切换暗色模式" aria-label="切换暗色模式">☾</button><button class="text-button logout-button" id="logout-button" type="button">退出</button></div></header>
     <section class="page-heading">
       <div><div class="eyebrow"><span class="eyebrow-dot"></span> CLUB OPERATIONS</div><h1>活动管理</h1><p>安排工作坊、开源项目与设备时段，让每次造物都有记录。</p></div>
       <button class="primary-button" id="create-button"><span class="plus">+</span> 创建活动</button>

@@ -37,6 +37,21 @@ SESSION_TTL = 7 * 24 * 60 * 60
 password_hasher = PasswordHasher()
 
 
+class ActivityTask(BaseModel):
+    id: str = Field(default_factory=lambda: uuid.uuid4().hex)
+    title: str = Field(min_length=1, max_length=100)
+    description: str = Field(default="", max_length=5000)
+    images: list[str] = Field(default_factory=list)
+
+    @field_validator("title")
+    @classmethod
+    def strip_title(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("任务名称不能为空")
+        return value
+
+
 class ActivityInput(BaseModel):
     title: str = Field(min_length=1, max_length=100)
     category: str = Field(min_length=1, max_length=20)
@@ -50,6 +65,7 @@ class ActivityInput(BaseModel):
     incentive_details: str = Field(default="", max_length=2000)
     incentive_images: list[str] = Field(default_factory=list)
     images: list[str] = Field(default_factory=list)
+    tasks: list[ActivityTask] = Field(default_factory=list, max_length=50)
 
     @field_validator("title", "location", "category")
     @classmethod
@@ -63,6 +79,10 @@ class ActivityInput(BaseModel):
     @classmethod
     def strip_description(cls, value: str) -> str:
         return value.strip()
+
+
+class ActivityTasksInput(BaseModel):
+    tasks: list[ActivityTask] = Field(default_factory=list, max_length=50)
 
 
 class CategoryInput(BaseModel):
@@ -180,6 +200,7 @@ def serialize_activity(document: dict, public: bool = False) -> dict:
         "updated_at": document["updated_at"],
     }
     if not public:
+        result["tasks"] = document.get("tasks", [])
         result["incentive_details"] = document.get("incentive_details", "")
         result["incentive_images"] = document.get("incentive_images", [])
     return result
@@ -300,9 +321,34 @@ def current_user(user: CurrentUser) -> dict:
 
 @app.get("/api/auth/activities")
 def my_activities(user: CurrentUser, activities: Activities) -> list[dict]:
-    return [serialize_activity(activity, public=True) for activity in activities.find(
+    result = []
+    completed = set(user.get("completed_tasks", []))
+    for activity in activities.find(
         {"_id": {"$in": user.get("registered_activities", [])}}
-    ).sort("start_time", ASCENDING)]
+    ).sort("start_time", ASCENDING):
+        item = serialize_activity(activity, public=True)
+        item["tasks"] = [
+            {**task, "completed": task["id"] in completed}
+            for task in activity.get("tasks", [])
+        ]
+        result.append(item)
+    return result
+
+
+@app.put("/api/auth/activities/{activity_id}/tasks/{task_id}")
+def complete_task(activity_id: str, task_id: str, completed: bool, user: CurrentUser,
+                  activities: Activities, users: Users) -> dict:
+    activity_obj = object_id_or_404(activity_id)
+    activity = activities.find_one({"_id": activity_obj})
+    if activity_obj not in user.get("registered_activities", []) or activity is None:
+        raise HTTPException(status_code=404, detail="报名活动不存在")
+    if activity["status"] == "已取消" or activity["end_time"] <= datetime.now(timezone.utc).replace(tzinfo=None):
+        raise HTTPException(status_code=409, detail="活动已结束或取消")
+    if not any(task["id"] == task_id for task in activity.get("tasks", [])):
+        raise HTTPException(status_code=404, detail="任务不存在")
+    operation = {"$addToSet": {"completed_tasks": task_id}} if completed else {"$pull": {"completed_tasks": task_id}}
+    users.update_one({"_id": user["_id"]}, operation)
+    return {"completed": completed}
 
 
 @app.post("/api/auth/logout", status_code=status.HTTP_204_NO_CONTENT)
@@ -407,6 +453,23 @@ def get_activity(activity_id: str, _: AdminUser, activities: Activities) -> dict
     return serialize_activity(document)
 
 
+@app.put("/api/activities/{activity_id}/tasks")
+def update_activity_tasks(
+    activity_id: str,
+    payload: ActivityTasksInput,
+    _: AdminUser,
+    activities: Activities,
+) -> dict:
+    document = activities.find_one_and_update(
+        {"_id": object_id_or_404(activity_id)},
+        {"$set": {"tasks": [task.model_dump() for task in payload.tasks], "updated_at": datetime.now(timezone.utc)}},
+        return_document=True,
+    )
+    if document is None:
+        raise HTTPException(status_code=404, detail="活动不存在")
+    return {"tasks": document.get("tasks", [])}
+
+
 @app.post("/api/public/activities/{activity_id}/register", status_code=status.HTTP_201_CREATED)
 def register_activity(activity_id: str, user: CurrentUser, activities: Activities, users: Users) -> dict:
     activity_id_obj = object_id_or_404(activity_id)
@@ -455,7 +518,7 @@ def update_activity(
     require_category(categories, payload.category)
     if payload.end_time <= payload.start_time:
         raise HTTPException(status_code=422, detail="结束时间必须晚于开始时间")
-    update = payload.model_dump()
+    update = payload.model_dump(exclude={"tasks"})
     update["updated_at"] = datetime.now(timezone.utc)
     document = activities.find_one_and_update(
         {"_id": object_id_or_404(activity_id)},
@@ -568,6 +631,11 @@ def member_space() -> FileResponse:
 @app.get("/admin", include_in_schema=False)
 def admin() -> FileResponse:
     return FileResponse(BASE_DIR / "static" / "index.html")
+
+
+@app.get("/admin/tasks", include_in_schema=False)
+def admin_tasks() -> FileResponse:
+    return FileResponse(BASE_DIR / "static" / "tasks.html")
 
 
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)

@@ -1,4 +1,6 @@
 .status-warning{display:block;margin-top:5px;color:#a34b2d;font-size:10px;line-height:1.3}
+.mobile-task-link{display:none;color:var(--green);text-decoration:none;font-size:12px;font-weight:600;white-space:nowrap}
+@media(max-width:760px){.mobile-task-link{display:inline}.top-actions{gap:10px}.breadcrumbs{font-size:11px}}
 :root{color-scheme:light}
 @media (min-width:761px){
 	body{overflow:hidden}
