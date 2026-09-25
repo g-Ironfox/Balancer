@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>活动记录 | Maker 开源硬件社</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css">
+  <link rel="stylesheet" href="/static/records.css">
+</head>
+<body>
+  <aside class="sidebar">
+    <a class="brand" href="/space" aria-label="返回我的空间"><span class="brand-mark">M</span><span>Maker<span class="brand-caption">OPEN HARDWARE</span></span></a>
+    <div class="nav-label">工作空间</div>
+    <nav aria-label="主导航">
+      <a class="nav-item" href="/admin"><span class="nav-icon">▦</span>活动管理</a>
+      <a class="nav-item" href="/admin/tasks"><span class="nav-icon">☷</span>活动任务</a>
+      <a class="nav-item active" href="/admin/records"><span class="nav-icon">▤</span>活动记录</a>
+      <a class="nav-item muted" href="#members"><span class="nav-icon">♧</span>社团成员</a>
+      <a class="nav-item muted" href="#settings"><span class="nav-icon">⚙</span>设置</a>
+    </nav>
+    <div class="sidebar-bottom"><span class="profile-avatar" id="profile-avatar">M</span><div><strong id="profile-username"></strong><small>社团管理员</small></div><button class="more-button" aria-label="更多选项">···</button></div>
+  </aside>
+  <main class="main-content records-main">
+    <header class="topbar"><div class="breadcrumbs">工作空间 <span>/</span> <strong>活动记录</strong></div><div class="top-actions"><a class="mobile-task-link" href="/admin">活动管理</a><a class="mobile-task-link" href="/admin/tasks">活动任务</a><button class="theme-button" id="theme-toggle" type="button" title="切换暗色模式" aria-label="切换暗色模式">☾</button><button class="text-button" id="logout-button" type="button">退出</button></div></header>
+    <section class="page-heading records-heading"><div><div class="eyebrow"><span class="eyebrow-dot"></span> ACTIVITY ARCHIVE</div><h1>活动记录</h1><p>整理活动现场的图文资料，发布后展示在首页。</p></div><button class="primary-button" id="new-record" type="button">＋ 新建记录</button></section>
+    <section class="records-workspace" aria-label="活动记录管理"><div class="section-heading"><div><h2>资料列表</h2></div><span id="record-count"></span></div><div id="record-list" class="records-list" aria-live="polite">正在加载记录…</div><div class="records-pagination" id="records-pagination" hidden><button class="text-button" id="previous-page" type="button">上一页</button><span id="page-number"></span><button class="text-button" id="next-page" type="button">下一页</button></div></section>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </main>
+  <dialog id="record-editor" class="activity-dialog record-editor" aria-labelledby="editor-heading">
+    <form id="record-form">
+      <div class="dialog-heading"><div><div class="eyebrow">FIELD NOTE</div><h2 id="editor-heading">新建记录</h2></div><button type="button" class="close-button" id="close-editor" aria-label="关闭">×</button></div>
+      <div class="form-grid">
+        <label class="field field-wide">所属活动<select id="record-activity" required></select></label>
+        <label class="field field-wide">记录标题<input id="record-title" maxlength="100" required placeholder="例如：工作坊现场回顾"></label>
+        <label class="field field-wide">记录内容<textarea id="record-description" maxlength="5000" rows="6" placeholder="作品、过程与现场收获"></textarea></label>
+        <label class="field field-wide">现场图片<input id="record-upload" type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple><span class="field-note">支持 PNG / JPEG / WebP / GIF，每张最大 5 MB，最多 30 张</span></label>
+        <div class="record-images" id="record-images"></div>
+        <label class="record-publish"><input id="record-published" type="checkbox"> 发布到首页</label>
+      </div>
+      <div class="dialog-error" id="editor-error" role="alert"></div>
+      <div class="dialog-actions"><button type="button" class="secondary-button" id="cancel-editor">取消</button><button class="primary-button" id="save-record" type="submit">保存记录</button></div>
+    </form>
+  </dialog>
+  <script src="/static/records.js" defer></script>
+</body>
+</html>

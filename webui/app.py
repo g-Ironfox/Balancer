@@ -85,6 +85,29 @@ class ActivityTasksInput(BaseModel):
     tasks: list[ActivityTask] = Field(default_factory=list, max_length=50)
 
 
+class ActivityRecordInput(BaseModel):
+    activity_id: str
+    title: str = Field(min_length=1, max_length=100)
+    description: str = Field(default="", max_length=5000)
+    images: list[str] = Field(default_factory=list, max_length=30)
+    published: bool = False
+
+    @field_validator("title")
+    @classmethod
+    def strip_record_title(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("记录标题不能为空")
+        return value
+
+    @field_validator("images")
+    @classmethod
+    def validate_images(cls, value: list[str]) -> list[str]:
+        if any(not re.fullmatch(r"/uploads/[a-zA-Z0-9._-]+", image) for image in value):
+            raise ValueError("图片地址无效")
+        return value
+
+
 class CategoryInput(BaseModel):
     name: str = Field(min_length=1, max_length=20)
 
@@ -206,6 +229,19 @@ def serialize_activity(document: dict, public: bool = False) -> dict:
     return result
 
 
+def serialize_record(document: dict, activity_title: str) -> dict:
+    return {
+        "id": str(document["_id"]),
+        "activity_id": str(document["activity_id"]),
+        "activity_title": activity_title,
+        "title": document["title"],
+        "description": document["description"],
+        "images": document["images"],
+        "published": document["published"],
+        "created_at": document["created_at"],
+    }
+
+
 def get_collection(request: Request) -> Collection:
     return request.app.state.database.activities
 
@@ -214,8 +250,13 @@ def get_categories(request: Request) -> Collection:
     return request.app.state.database.categories
 
 
+def get_records(request: Request) -> Collection:
+    return request.app.state.database.activity_records
+
+
 Activities = Annotated[Collection, Depends(get_collection)]
 Categories = Annotated[Collection, Depends(get_categories)]
+Records = Annotated[Collection, Depends(get_records)]
 
 DEFAULT_CATEGORIES = ["工作坊", "创客马拉松", "技术分享", "开源项目", "社团会议", "其他"]
 
@@ -247,6 +288,8 @@ async def lifespan(app: FastAPI):
     database = client[os.getenv("MONGO_DB", "balancer")]
     database.activities.create_index([("start_time", ASCENDING)])
     database.activities.create_index([("updated_at", DESCENDING)])
+    database.activity_records.create_index([("created_at", DESCENDING)])
+    database.activity_records.create_index("activity_id")
     database.categories.create_index("name", unique=True)
     database.users.create_index("username", unique=True)
     if database.categories.count_documents({}) == 0:
@@ -424,6 +467,70 @@ def public_activities(
     )
 
 
+@app.get("/api/public/records", response_model=ActivityPage)
+def public_records(activities: Activities, records: Records,
+                   page: int = Query(default=1, ge=1),
+                   page_size: int = Query(default=6, ge=1, le=30)) -> ActivityPage:
+    activity_names = {item["_id"]: item["title"] for item in activities.find(
+        {"status": {"$in": ["报名中", "进行中", "已结束"]}}, {"title": 1}
+    )}
+    filters = {"published": True, "activity_id": {"$in": list(activity_names)}}
+    total = records.count_documents(filters)
+    cursor = records.find(filters).sort("created_at", DESCENDING).skip((page - 1) * page_size).limit(page_size)
+    return ActivityPage(items=[serialize_record(item, activity_names[item["activity_id"]]) for item in cursor],
+                        total=total, page=page, page_size=page_size)
+
+
+@app.get("/api/records", response_model=ActivityPage)
+def list_records(_: AdminUser, activities: Activities, records: Records,
+                 page: int = Query(default=1, ge=1),
+                 page_size: int = Query(default=20, ge=1, le=100)) -> ActivityPage:
+    total = records.count_documents({})
+    cursor = records.find().sort("created_at", DESCENDING).skip((page - 1) * page_size).limit(page_size)
+    items = list(cursor)
+    activity_names = {item["_id"]: item["title"] for item in activities.find(
+        {"_id": {"$in": [item["activity_id"] for item in items]}}, {"title": 1}
+    )}
+    return ActivityPage(items=[serialize_record(item, activity_names.get(item["activity_id"], "已删除的活动"))
+                               for item in items], total=total, page=page, page_size=page_size)
+
+
+@app.post("/api/records", status_code=status.HTTP_201_CREATED)
+def create_record(payload: ActivityRecordInput, _: AdminUser, activities: Activities, records: Records) -> dict:
+    activity_id = object_id_or_404(payload.activity_id)
+    activity = activities.find_one({"_id": activity_id})
+    if activity is None:
+        raise HTTPException(status_code=404, detail="活动不存在")
+    document = payload.model_dump(exclude={"activity_id"})
+    document.update(activity_id=activity_id, created_at=datetime.now(timezone.utc))
+    document["_id"] = records.insert_one(document).inserted_id
+    return serialize_record(document, activity["title"])
+
+
+@app.put("/api/records/{record_id}")
+def update_record(record_id: str, payload: ActivityRecordInput, _: AdminUser,
+                  activities: Activities, records: Records) -> dict:
+    activity_id = object_id_or_404(payload.activity_id)
+    activity = activities.find_one({"_id": activity_id})
+    if activity is None:
+        raise HTTPException(status_code=404, detail="活动不存在")
+    update = payload.model_dump(exclude={"activity_id"})
+    update["activity_id"] = activity_id
+    document = records.find_one_and_update({"_id": object_id_or_404(record_id, "记录不存在")},
+                                           {"$set": update}, return_document=True)
+    if document is None:
+        raise HTTPException(status_code=404, detail="记录不存在")
+    return serialize_record(document, activity["title"])
+
+
+@app.delete("/api/records/{record_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_record(record_id: str, _: AdminUser, records: Records) -> Response:
+    result = records.delete_one({"_id": object_id_or_404(record_id, "记录不存在")})
+    if not result.deleted_count:
+        raise HTTPException(status_code=404, detail="记录不存在")
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
 @app.get("/api/activities/summary")
 def activity_summary(_: AdminUser, activities: Activities) -> dict[str, int]:
     now = datetime.now(timezone.utc)
@@ -531,10 +638,11 @@ def update_activity(
 
 
 @app.delete("/api/activities/{activity_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_activity(activity_id: str, _: AdminUser, activities: Activities) -> Response:
+def delete_activity(activity_id: str, _: AdminUser, activities: Activities, records: Records) -> Response:
     result = activities.delete_one({"_id": object_id_or_404(activity_id)})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="活动不存在")
+    records.delete_many({"activity_id": ObjectId(activity_id)})
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
@@ -636,6 +744,11 @@ def admin() -> FileResponse:
 @app.get("/admin/tasks", include_in_schema=False)
 def admin_tasks() -> FileResponse:
     return FileResponse(BASE_DIR / "static" / "tasks.html")
+
+
+@app.get("/admin/records", include_in_schema=False)
+def admin_records() -> FileResponse:
+    return FileResponse(BASE_DIR / "static" / "records.html")
 
 
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)

@@ -1,11 +1,82 @@
 window.addEventListener('load', () => {
   window.lucide?.createIcons();
+    const pageSections = [...document.querySelectorAll('main > section')];
+    const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+    let pageScrollLocked = false;
+    let touchStartY = null;
+    let touchStartSection = null;
+
+    function currentSectionIndex() {
+      const currentScroll = window.scrollY;
+      return pageSections.reduce((closestIndex, section, index) => {
+        const closestDistance = Math.abs(pageSections[closestIndex].offsetTop - currentScroll);
+        const sectionDistance = Math.abs(section.offsetTop - currentScroll);
+        return sectionDistance < closestDistance ? index : closestIndex;
+      }, 0);
+    }
+
+    function springScrollTo(target) {
+      if (reducedMotion.matches) {
+        window.scrollTo(0, target);
+        return;
+      }
+      const start = window.scrollY;
+      const distance = target - start;
+      const startedAt = performance.now();
+      const duration = 720;
+      function step(now) {
+        const progress = Math.min(1, (now - startedAt) / duration);
+        const eased = 1 - Math.exp(-7 * progress) * Math.cos(progress * Math.PI * 1.35);
+        window.scrollTo(0, start + distance * eased);
+        if (progress < 1) requestAnimationFrame(step);
+      }
+      requestAnimationFrame(step);
+    }
+
+    function moveOneSection(direction) {
+      if (pageScrollLocked) return;
+      const nextIndex = Math.max(0, Math.min(pageSections.length - 1, currentSectionIndex() + direction));
+      if (nextIndex === currentSectionIndex()) return;
+      pageScrollLocked = true;
+      springScrollTo(pageSections[nextIndex].offsetTop);
+      window.setTimeout(() => { pageScrollLocked = false; }, reducedMotion.matches ? 180 : 760);
+    }
+
+    window.addEventListener('wheel', (event) => {
+      if (Math.abs(event.deltaY) < 8 || document.querySelector('dialog[open]') || event.target.closest('input, button, a, select, textarea')) return;
+      const section = event.target.closest('main > section');
+      if (section) {
+        const canScrollDown = section.scrollTop + section.clientHeight < section.scrollHeight - 1;
+        const canScrollUp = section.scrollTop > 1;
+        if ((event.deltaY > 0 && canScrollDown) || (event.deltaY < 0 && canScrollUp)) return;
+      }
+      event.preventDefault();
+      moveOneSection(event.deltaY > 0 ? 1 : -1);
+    }, { passive: false });
+
+    window.addEventListener('touchstart', (event) => {
+      touchStartY = event.touches[0]?.clientY ?? null;
+      touchStartSection = event.target.closest('main > section');
+    }, { passive: true });
+    window.addEventListener('touchend', (event) => {
+      if (touchStartY === null) return;
+      const distance = touchStartY - (event.changedTouches[0]?.clientY ?? touchStartY);
+      touchStartY = null;
+      const section = touchStartSection;
+      touchStartSection = null;
+      if (section && Math.abs(distance) > 45) {
+        const canScrollDown = section.scrollTop + section.clientHeight < section.scrollHeight - 1;
+        const canScrollUp = section.scrollTop > 1;
+        if ((distance > 0 && canScrollDown) || (distance < 0 && canScrollUp)) return;
+      }
+      if (Math.abs(distance) > 45) moveOneSection(distance > 0 ? 1 : -1);
+    }, { passive: true });
+
     const host = document.querySelector('#universe');
     const letter = document.querySelector('#galaxy-letter');
     const pauseButton = document.querySelector('#pause');
     const resetButton = document.querySelector('#reset');
     const speedControl = document.querySelector('#speed');
-    const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
     const seed = 20260921;
     const galaxyZoom = 2;
     const starCountScale = 2;
