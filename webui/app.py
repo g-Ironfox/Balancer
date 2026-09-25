@@ -144,12 +144,32 @@ class LoginInput(CredentialsInput):
     pass
 
 
+class ProfileInput(BaseModel):
+    real_name: str = Field(max_length=50)
+    student_id: str = Field(max_length=50)
+    college_major: str = Field(max_length=100)
+
+    @field_validator("real_name", "student_id", "college_major")
+    @classmethod
+    def strip_profile(cls, value: str) -> str:
+        return value.strip()
+
+
+class MemberRoleInput(BaseModel):
+    role: Literal["member", "user", "core", "admin"]
+
+
 def session_key(token: str) -> str:
     return f"session:{hashlib.sha256(token.encode()).hexdigest()}"
 
 
 def public_user(document: dict) -> dict:
-    return {"id": str(document["_id"]), "username": document["username"], "role": document["role"]}
+    return {
+        "id": str(document["_id"]), "username": document["username"], "role": document["role"],
+        "real_name": document.get("real_name", ""),
+        "student_id": document.get("student_id", ""),
+        "college_major": document.get("college_major", ""),
+    }
 
 
 def get_user_collection(request: Request) -> Collection:
@@ -177,8 +197,8 @@ CurrentUser = Annotated[dict, Depends(get_current_user)]
 
 
 def require_admin(user: CurrentUser) -> dict:
-    if user.get("role") != "admin":
-        raise HTTPException(status_code=403, detail="没有管理员权限")
+    if user.get("role") not in ("user", "core", "admin"):
+        raise HTTPException(status_code=403, detail="没有后台权限")
     return user
 
 
@@ -332,7 +352,7 @@ def register(payload: CredentialsInput, users: Users) -> dict:
     document = {
         "username": payload.username,
         "password_hash": password_hasher.hash(payload.password),
-        "role": "user",
+        "role": "member",
         "disabled": False,
         "registered_activities": [],
         "created_at": datetime.now(timezone.utc),
@@ -360,6 +380,44 @@ def login(payload: LoginInput, users: Users, request: Request, response: Respons
 @app.get("/api/auth/me")
 def current_user(user: CurrentUser) -> dict:
     return public_user(user)
+
+
+@app.put("/api/auth/profile")
+def update_profile(payload: ProfileInput, user: CurrentUser, users: Users) -> dict:
+    fields = payload.model_dump()
+    users.update_one({"_id": user["_id"]}, {"$set": fields})
+    return public_user({**user, **fields})
+
+
+@app.get("/api/admin/members")
+def list_members(_: AdminUser, users: Users) -> list[dict]:
+    return [
+        {
+            "id": str(user["_id"]),
+            "username": user["username"],
+            "role": user["role"],
+            "real_name": user.get("real_name", ""),
+            "student_id": user.get("student_id", ""),
+            "college_major": user.get("college_major", ""),
+            "created_at": user["created_at"],
+        }
+        for user in users.find({}, {"username": 1, "role": 1, "real_name": 1, "student_id": 1,
+                                "college_major": 1, "created_at": 1})
+        .sort("created_at", DESCENDING)
+    ]
+
+
+@app.put("/api/admin/members/{member_id}/role")
+def update_member_role(member_id: str, payload: MemberRoleInput, admin: AdminUser, users: Users) -> dict:
+    if admin["role"] != "admin":
+        raise HTTPException(status_code=403, detail="仅系统管理员可修改成员身份")
+    member = users.find_one({"_id": object_id_or_404(member_id, "成员不存在")})
+    if member is None:
+        raise HTTPException(status_code=404, detail="成员不存在")
+    if member["_id"] == admin["_id"] and payload.role != "admin":
+        raise HTTPException(status_code=409, detail="不能取消自己的管理员身份")
+    users.update_one({"_id": member["_id"]}, {"$set": {"role": payload.role}})
+    return {"id": str(member["_id"]), "role": payload.role}
 
 
 @app.get("/api/auth/activities")
@@ -749,6 +807,11 @@ def admin_tasks() -> FileResponse:
 @app.get("/admin/records", include_in_schema=False)
 def admin_records() -> FileResponse:
     return FileResponse(BASE_DIR / "static" / "records.html")
+
+
+@app.get("/admin/members", include_in_schema=False)
+def admin_members() -> FileResponse:
+    return FileResponse(BASE_DIR / "static" / "members.html")
 
 
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)

@@ -22,6 +22,18 @@ body { margin: 0; min-height: 100dvh; background: linear-gradient(150deg, #f2f5f
 .avatar { width: 64px; height: 64px; flex: none; display: grid; place-items: center; border-radius: 50%; background: #d8e9dd; color: #265b46; font-size: 25px; font-weight: 700; }
 .identity h2 { margin: 0; font-size: 22px; overflow-wrap: anywhere; }
 .identity p { margin: 5px 0 0; color: #74847a; }
+.profile-section { padding: 26px 0 30px; border-bottom: 1px solid #cbd9ce; }
+.profile-heading .eyebrow { margin: 0 0 5px; }
+.profile-heading h2 { margin: 0 0 20px; font-size: 24px; }
+#profile-form { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+#profile-form label { display: grid; gap: 8px; color: #52675a; font-size: 13px; font-weight: 600; }
+#profile-form input { width: 100%; min-height: 42px; padding: 9px 12px; border: 1px solid #cbd9ce; border-radius: 4px; background: #fff; color: #25322d; font: inherit; }
+#profile-form input:focus-visible { outline: 2px solid #4a8764; outline-offset: 2px; }
+.profile-actions { grid-column: 1 / -1; display: flex; align-items: center; justify-content: flex-end; gap: 16px; }
+#profile-status { margin: 0; color: #52675a; font-size: 13px; }
+#save-profile { min-height: 40px; padding: 0 20px; border: 0; border-radius: 4px; background: #275c4b; color: #fff; font: 600 13px "DM Sans", "Noto Sans SC", sans-serif; cursor: pointer; }
+#save-profile:hover { background: #1d4b3d; }
+#save-profile:disabled { opacity: .6; cursor: wait; }
 .space-links { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-top: 30px; }
 .space-links a { min-height: 100px; display: flex; align-items: center; gap: 15px; padding: 22px; border: 1px solid #cbd9ce; border-radius: 2px; background: #fff; color: #285641; font-size: 17px; font-weight: 600; text-decoration: none; }
 .space-links a:hover { border-color: #4a8764; background: #f8fcf8; }
@@ -62,6 +74,7 @@ body { margin: 0; min-height: 100dvh; background: linear-gradient(150deg, #f2f5f
   .site-header nav { gap: 14px; }
   .workspace { margin: 7vh auto 0; padding: 0 20px 48px; }
   .heading h1 { margin-bottom: 28px; font-size: 34px; }
+  #profile-form { grid-template-columns: 1fr; }
   .space-links { grid-template-columns: 1fr; }
   .space-links a { min-height: 80px; }
 }

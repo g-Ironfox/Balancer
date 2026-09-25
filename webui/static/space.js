@@ -9,7 +9,11 @@ async function loadSpace() {
     const user = await response.json();
     document.querySelector("#username").textContent = user.username;
     document.querySelector("#avatar").textContent = user.username.slice(0, 1).toUpperCase();
-    document.querySelector("#admin-link").hidden = user.role !== "admin";
+    document.querySelector("#member-role").textContent = { member: "会员", user: "普通成员", core: "核心成员", admin: "系统管理员" }[user.role];
+    document.querySelector("#admin-link").hidden = !["user", "core", "admin"].includes(user.role);
+    document.querySelector("#real-name").value = user.real_name || "";
+    document.querySelector("#student-id").value = user.student_id || "";
+    document.querySelector("#college-major").value = user.college_major || "";
     document.querySelector(".workspace").hidden = false;
     await loadRegisteredActivities();
     window.lucide?.createIcons();
@@ -22,6 +26,35 @@ async function loadSpace() {
     document.querySelector("#todo-groups").textContent = "任务加载失败，请刷新重试。";
   }
 }
+
+document.querySelector("#profile-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const button = document.querySelector("#save-profile");
+  const status = document.querySelector("#profile-status");
+  button.disabled = true;
+  status.textContent = "正在保存…";
+  try {
+    const response = await fetch("/api/auth/profile", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        real_name: document.querySelector("#real-name").value,
+        student_id: document.querySelector("#student-id").value,
+        college_major: document.querySelector("#college-major").value,
+      }),
+    });
+    if (!response.ok) throw new Error("保存失败，请重试。");
+    const user = await response.json();
+    document.querySelector("#real-name").value = user.real_name;
+    document.querySelector("#student-id").value = user.student_id;
+    document.querySelector("#college-major").value = user.college_major;
+    status.textContent = "已保存";
+  } catch {
+    status.textContent = "保存失败，请重试。";
+  } finally {
+    button.disabled = false;
+  }
+});
 
 function showTaskDetail(activity, task) {
   const dialog = document.querySelector("#task-detail");

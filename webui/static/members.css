@@ -1,0 +1,14 @@
+.members-section .section-heading { display: flex; align-items: center; justify-content: space-between; }
+.members-section .table-wrap { overflow-x: auto; }
+.members-section table { min-width: 830px; }
+.members-section td { color: var(--ink); overflow-wrap: anywhere; }
+.member-account { display: flex; align-items: center; gap: 12px; font-weight: 600; overflow-wrap: anywhere; }
+.member-avatar { display: grid; place-items: center; width: 34px; height: 34px; flex: none; border-radius: 50%; background: var(--mint); color: var(--green); font-weight: 700; }
+.member-role { width: 110px; padding: 6px; border: 1px solid #cbd9ce; border-radius: 4px; background: var(--paper); color: var(--ink); font: inherit; cursor: pointer; }
+.member-role:disabled { opacity: .65; cursor: default; }
+.role-feedback { display: block; min-height: 15px; margin-top: 3px; color: var(--muted); font-size: 10px; }
+.members-section .loading-state { text-align: center; padding: 30px 16px; }
+.members-section .loading-state[hidden] { display: none; }
+body.dark .members-section td { color: var(--ink); }
+@media (max-width: 760px) { .members-section th, .members-section td { padding-left: 8px; padding-right: 8px; font-size: 11px; } .member-account { gap: 7px; } .member-avatar { width: 26px; height: 26px; } }
+@media (max-width: 760px) { .members-main .topbar { height: auto; min-height: 49px; flex-wrap: wrap; gap: 6px; padding: 8px 0; } .members-main .top-actions { flex-wrap: wrap; } }

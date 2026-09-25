@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="/static/space.css">
   <link rel="stylesheet" href="/static/space-activities.css">
   <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js" defer></script>
-  <script src="/static/space.js" defer></script>
+  <script src="/static/space.js?v=20260925" defer></script>
 </head>
 <body>
   <header class="site-header">
@@ -21,7 +21,16 @@
     <div class="heading"><p class="eyebrow">MAKER CLUB / MEMBER SPACE</p><h1>我的空间</h1></div>
     <section class="identity" aria-label="社员信息">
       <span class="avatar" id="avatar" aria-hidden="true"></span>
-      <div><h2 id="username"></h2><p>社团成员</p></div>
+      <div><h2 id="username"></h2><p id="member-role"></p></div>
+    </section>
+    <section class="profile-section" aria-labelledby="profile-title">
+      <div class="profile-heading"><p class="eyebrow">MY PROFILE</p><h2 id="profile-title">个人信息</h2></div>
+      <form id="profile-form">
+        <label>真实姓名<input id="real-name" name="real_name" type="text" autocomplete="name" maxlength="50"></label>
+        <label>学号<input id="student-id" name="student_id" type="text" maxlength="50"></label>
+        <label>学院 / 专业<input id="college-major" name="college_major" type="text" maxlength="100"></label>
+        <div class="profile-actions"><p id="profile-status" role="status" aria-live="polite"></p><button id="save-profile" type="submit">保存信息</button></div>
+      </form>
     </section>
     <div class="space-links">
       <a href="/#activities"><i data-lucide="calendar-days" aria-hidden="true"></i><span>社团活动</span><i data-lucide="arrow-up-right" aria-hidden="true"></i></a>

@@ -247,9 +247,10 @@ document.querySelector("#theme-toggle").addEventListener("click", () => {
 async function boot() {
   try {
     const user = await request("/api/auth/me");
-    if (user.role !== "admin") throw new Error("没有管理员权限");
+    if (!["user", "core", "admin"].includes(user.role)) throw new Error("没有后台权限");
     document.querySelector("#profile-avatar").textContent = user.username.slice(0, 1).toUpperCase();
     document.querySelector("#profile-username").textContent = user.username;
+    document.querySelector("#profile-role").textContent = { user: "普通成员", core: "核心成员", admin: "系统管理员" }[user.role];
   } catch {
     window.location.replace("/login");
     return;

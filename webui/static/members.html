@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>社团成员 | Maker 开源硬件社</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css">
+  <link rel="stylesheet" href="/static/members.css">
+</head>
+<body>
+  <aside class="sidebar">
+    <a class="brand" href="/space" aria-label="返回我的空间"><span class="brand-mark">M</span><span>Maker<span class="brand-caption">OPEN HARDWARE</span></span></a>
+    <div class="nav-label">工作空间</div>
+    <nav aria-label="主导航">
+      <a class="nav-item" href="/admin"><span class="nav-icon">▦</span>活动管理</a>
+      <a class="nav-item" href="/admin/tasks"><span class="nav-icon">☷</span>活动任务</a>
+      <a class="nav-item" href="/admin/records"><span class="nav-icon">▤</span>活动记录</a>
+      <a class="nav-item active" href="/admin/members" aria-current="page"><span class="nav-icon">♧</span>社团成员</a>
+      <a class="nav-item muted" href="#settings"><span class="nav-icon">⚙</span>设置</a>
+    </nav>
+    <div class="sidebar-bottom"><span class="profile-avatar" id="profile-avatar">M</span><div><strong id="profile-username"></strong><small id="profile-role"></small></div><button class="more-button" aria-label="更多选项">···</button></div>
+  </aside>
+  <main class="main-content members-main">
+    <header class="topbar"><div class="breadcrumbs">工作空间 <span>/</span> <strong>社团成员</strong></div><div class="top-actions"><a class="mobile-task-link" href="/admin">活动管理</a><a class="mobile-task-link" href="/admin/tasks">活动任务</a><a class="mobile-task-link" href="/admin/records">活动记录</a><button class="theme-button" id="theme-toggle" type="button" title="切换暗色模式" aria-label="切换暗色模式">☾</button><button class="text-button" id="logout-button" type="button">退出</button></div></header>
+    <section class="page-heading"><div><div class="eyebrow"><span class="eyebrow-dot"></span> CLUB MEMBERS</div><h1>社团成员</h1><p>已注册的社团账号。</p></div></section>
+    <section class="activity-section members-section" aria-label="已注册用户">
+      <div class="section-heading"><div><h2>成员列表</h2></div><span class="result-count" id="member-count"></span></div>
+      <div class="table-wrap"><table><thead><tr><th>账号</th><th>真实姓名</th><th>学号</th><th>学院 / 专业</th><th>身份</th><th>注册时间</th></tr></thead><tbody id="member-rows"></tbody></table><div class="loading-state" id="member-status" role="status">正在载入成员…</div></div>
+    </section>
+  </main>
+  <script src="/static/members.js?v=20260925" defer></script>
+</body>
+</html>
