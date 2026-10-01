@@ -1,16 +1,27 @@
 .members-section .section-heading { display: flex; align-items: center; justify-content: space-between; }
+.members-section .section-actions { display: flex; align-items: center; gap: 16px; }
 .members-section .table-wrap { overflow-x: auto; }
-.members-section table { min-width: 930px; }
+.members-section table { min-width: 1040px; }
 .members-section td { color: var(--ink); overflow-wrap: anywhere; }
 .member-account { display: flex; align-items: center; gap: 12px; font-weight: 600; overflow-wrap: anywhere; }
 .member-avatar { display: grid; place-items: center; width: 34px; height: 34px; flex: none; border-radius: 50%; background: var(--mint); color: var(--green); font-weight: 700; }
 .member-role { width: 110px; padding: 6px; border: 1px solid #cbd9ce; border-radius: 4px; background: var(--paper); color: var(--ink); font: inherit; cursor: pointer; }
 .member-role:disabled { opacity: .65; cursor: default; }
+.member-department { width: 130px; padding: 6px; border: 1px solid #cbd9ce; border-radius: 4px; background: var(--paper); color: var(--ink); font: inherit; cursor: pointer; }
 .member-role-cell { vertical-align: middle; }
 .role-editor { position: relative; display: flex; align-items: center; min-height: 34px; }
 .role-feedback { position: absolute; top: 100%; left: 0; white-space: nowrap; color: var(--muted); font-size: 10px; }
 .password-button { white-space: nowrap; }
 #password-dialog { width: min(440px, calc(100% - 28px)); border: 1px solid #ccd8ce; padding: 25px 28px 24px; box-shadow: 0 24px 70px #101d17a8; }
+#member-dialog { width: min(440px, calc(100% - 28px)); border: 1px solid #ccd8ce; padding: 25px 28px 24px; box-shadow: 0 24px 70px #101d17a8; }
+#member-dialog .dialog-heading { align-items: center; border: 0; padding: 0; }
+#member-dialog .close-button { width: 32px; height: 32px; border-radius: 5px; display: grid; place-items: center; }
+#member-dialog .close-button:hover { background: var(--mint); color: var(--green); }
+#member-dialog .field { gap: 8px; font-size: 12px; }
+#member-dialog .field input { min-height: 42px; font-size: 14px; }
+#member-dialog .dialog-actions { gap: 10px; margin-top: 26px; padding-top: 18px; }
+#member-dialog .dialog-actions .text-button { padding: 8px 11px; }
+#member-dialog .primary-button[data-busy="true"] { opacity: .65; pointer-events: none; }
 #password-dialog .dialog-heading { align-items: center; border: 0; padding: 0; }
 #password-dialog .close-button { width: 32px; height: 32px; border-radius: 5px; display: grid; place-items: center; }
 #password-dialog .close-button:hover { background: var(--mint); color: var(--green); }

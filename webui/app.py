@@ -196,6 +196,15 @@ class MemberPasswordInput(BaseModel):
     password: str = Field(min_length=8, max_length=128)
 
 
+class CreateMemberInput(CredentialsInput):
+    role: Literal["member", "user", "core", "admin"] = "member"
+    department_id: str = ""
+
+
+class MemberDepartmentInput(BaseModel):
+    department_id: str = ""
+
+
 def session_key(token: str) -> str:
     return f"session:{hashlib.sha256(token.encode()).hexdigest()}"
 
@@ -439,15 +448,45 @@ def list_members(_: AdminUser, users: Users) -> list[dict]:
             "id": str(user["_id"]),
             "username": user["username"],
             "role": user["role"],
+            "department_id": str(user["department_id"]) if user.get("department_id") else "",
             "real_name": user.get("real_name", ""),
             "student_id": user.get("student_id", ""),
             "college_major": user.get("college_major", ""),
             "created_at": user["created_at"],
         }
-        for user in users.find({}, {"username": 1, "role": 1, "real_name": 1, "student_id": 1,
+        for user in users.find({}, {"username": 1, "role": 1, "department_id": 1, "real_name": 1, "student_id": 1,
                                 "college_major": 1, "created_at": 1})
         .sort("created_at", DESCENDING)
     ]
+
+
+@app.post("/api/admin/members", status_code=status.HTTP_201_CREATED)
+def create_member(
+    payload: CreateMemberInput, admin: AdminUser, users: Users, departments: Departments
+) -> dict:
+    if admin["role"] != "admin":
+        raise HTTPException(status_code=403, detail="仅系统管理员可增加成员")
+    department_id = None
+    if payload.role in ("user", "core"):
+        department_id = object_id_or_404(payload.department_id, "部门不存在")
+        if departments.find_one({"_id": department_id}) is None:
+            raise HTTPException(status_code=404, detail="部门不存在")
+    if users.count_documents({"username": payload.username}):
+        raise HTTPException(status_code=409, detail="该账号已存在")
+    document = {
+        "username": payload.username,
+        "password_hash": password_hasher.hash(payload.password),
+        "role": payload.role,
+        "department_id": department_id,
+        "disabled": False,
+        "registered_activities": [],
+        "created_at": datetime.now(timezone.utc),
+    }
+    try:
+        document["_id"] = users.insert_one(document).inserted_id
+    except DuplicateKeyError:
+        raise HTTPException(status_code=409, detail="该账号已存在") from None
+    return public_user(document)
 
 
 @app.put("/api/admin/members/{member_id}/role")
@@ -461,6 +500,28 @@ def update_member_role(member_id: str, payload: MemberRoleInput, admin: AdminUse
         raise HTTPException(status_code=409, detail="不能取消自己的管理员身份")
     users.update_one({"_id": member["_id"]}, {"$set": {"role": payload.role}})
     return {"id": str(member["_id"]), "role": payload.role}
+
+
+@app.put("/api/admin/members/{member_id}/department")
+def update_member_department(
+    member_id: str, payload: MemberDepartmentInput, admin: AdminUser,
+    users: Users, departments: Departments
+) -> dict:
+    if admin["role"] != "admin":
+        raise HTTPException(status_code=403, detail="仅系统管理员可分配成员部门")
+    member = users.find_one({"_id": object_id_or_404(member_id, "成员不存在")})
+    if member is None:
+        raise HTTPException(status_code=404, detail="成员不存在")
+    if not payload.department_id:
+        if member.get("role") in ("user", "core"):
+            raise HTTPException(status_code=409, detail="普通成员和核心成员必须分配部门")
+        users.update_one({"_id": member["_id"]}, {"$unset": {"department_id": ""}})
+        return {"id": member_id, "department_id": ""}
+    department_id = object_id_or_404(payload.department_id, "部门不存在")
+    if departments.find_one({"_id": department_id}) is None:
+        raise HTTPException(status_code=404, detail="部门不存在")
+    users.update_one({"_id": member["_id"]}, {"$set": {"department_id": department_id}})
+    return {"id": member_id, "department_id": payload.department_id}
 
 
 @app.put("/api/admin/members/{member_id}/password")
@@ -885,8 +946,13 @@ def update_department(department_id: str, payload: DepartmentInput, _: AdminUser
 
 
 @app.delete("/api/admin/departments/{department_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_department(department_id: str, _: AdminUser, departments: Departments) -> Response:
-    result = departments.delete_one({"_id": object_id_or_404(department_id, "部门不存在")})
+def delete_department(
+    department_id: str, _: AdminUser, departments: Departments, users: Users
+) -> Response:
+    identifier = object_id_or_404(department_id, "部门不存在")
+    if users.find_one({"department_id": identifier}, {"_id": 1}):
+        raise HTTPException(status_code=409, detail="该部门仍分配给成员，无法删除")
+    result = departments.delete_one({"_id": identifier})
     if not result.deleted_count:
         raise HTTPException(status_code=404, detail="部门不存在")
     return Response(status_code=status.HTTP_204_NO_CONTENT)

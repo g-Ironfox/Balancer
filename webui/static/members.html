@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/styles.css">
-  <link rel="stylesheet" href="/static/members.css?v=20261001-4">
+  <link rel="stylesheet" href="/static/members.css?v=20261001-6">
 </head>
 <body>
   <aside class="sidebar">
@@ -28,10 +28,24 @@
     <header class="topbar"><div class="breadcrumbs">工作空间 <span>/</span> <strong>社团成员</strong></div><div class="top-actions"><a class="mobile-task-link" href="/admin">活动管理</a><a class="mobile-task-link" href="/admin/tasks">活动任务</a><a class="mobile-task-link" href="/admin/records">活动记录</a><a class="mobile-task-link" href="/admin/departments">部门管理</a><button class="theme-button" id="theme-toggle" type="button" title="切换暗色模式" aria-label="切换暗色模式">☾</button><button class="text-button" id="logout-button" type="button">退出</button></div></header>
     <section class="page-heading"><div><div class="eyebrow"><span class="eyebrow-dot"></span> CLUB MEMBERS</div><h1>社团成员</h1><p>已注册的社团账号。</p></div></section>
     <section class="activity-section members-section" aria-label="已注册用户">
-      <div class="section-heading"><div><h2>成员列表</h2></div><span class="result-count" id="member-count"></span></div>
-      <div class="table-wrap"><table><thead><tr><th>账号</th><th>真实姓名</th><th>学号</th><th>学院 / 专业</th><th>身份</th><th>注册时间</th><th>操作</th></tr></thead><tbody id="member-rows"></tbody></table><div class="loading-state" id="member-status" role="status">正在载入成员…</div></div>
+      <div class="section-heading"><div><h2>成员列表</h2></div><div class="section-actions"><span class="result-count" id="member-count"></span><button class="primary-button" id="add-member-button" type="button" hidden>增加成员</button></div></div>
+      <div class="table-wrap"><table><thead><tr><th>账号</th><th>真实姓名</th><th>学号</th><th>学院 / 专业</th><th>身份</th><th>所属部门</th><th>注册时间</th><th>操作</th></tr></thead><tbody id="member-rows"></tbody></table><div class="loading-state" id="member-status" role="status">正在载入成员…</div></div>
     </section>
   </main>
+  <dialog id="member-dialog" class="activity-dialog" aria-labelledby="member-dialog-title">
+    <form method="dialog" id="member-form">
+      <div class="dialog-heading"><div><div class="eyebrow"><span class="eyebrow-dot"></span> NEW ACCOUNT</div><h2 id="member-dialog-title">增加成员</h2></div><button class="close-button" type="button" value="cancel" aria-label="关闭">×</button></div>
+      <p class="password-target">创建后默认身份为会员，可在成员列表中调整。</p>
+      <div class="password-fields">
+        <label class="field">账号<input id="member-username" type="text" minlength="3" maxlength="50" autocomplete="username" required></label>
+        <label class="field">身份<select id="member-role"><option value="member">会员</option><option value="user">普通成员</option><option value="core">核心成员</option><option value="admin">系统管理员</option></select></label>
+        <label class="field" id="member-department-field" hidden>所属部门<select id="member-department" required></select></label>
+        <label class="field">初始密码<input id="member-password" type="password" minlength="8" maxlength="128" autocomplete="new-password" required></label>
+      </div>
+      <p class="dialog-feedback" id="member-feedback" role="status"></p>
+      <div class="dialog-actions"><button class="text-button" type="button" value="cancel">取消</button><button class="primary-button" id="create-member" value="default">创建成员</button></div>
+    </form>
+  </dialog>
   <dialog id="password-dialog" class="activity-dialog" aria-labelledby="password-dialog-title">
     <form method="dialog" id="password-form">
       <div class="dialog-heading"><div><div class="eyebrow"><span class="eyebrow-dot"></span> ACCOUNT SECURITY</div><h2 id="password-dialog-title">修改成员密码</h2></div><button class="close-button" type="button" value="cancel" aria-label="关闭">×</button></div>
@@ -44,6 +58,6 @@
       <div class="dialog-actions"><button class="text-button" type="button" value="cancel">取消</button><button class="primary-button" id="save-password" value="default">保存密码</button></div>
     </form>
   </dialog>
-  <script src="/static/members.js?v=20261001-4" defer></script>
+  <script src="/static/members.js?v=20261001-6" defer></script>
 </body>
 </html>
