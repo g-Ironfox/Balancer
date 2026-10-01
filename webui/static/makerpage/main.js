@@ -1,5 +1,48 @@
 window.addEventListener('load', () => {
   window.lucide?.createIcons();
+  const departmentList = document.querySelector('#department-list');
+  fetch('/api/departments')
+    .then((response) => {
+      if (!response.ok) throw new Error('部门暂时无法加载');
+      return response.json();
+    })
+    .then((departments) => {
+      departmentList.replaceChildren();
+      if (!departments.length) {
+        departmentList.innerHTML = '<p class="department-message">部门介绍即将更新。</p>';
+        return;
+      }
+      departments.forEach((department, index) => {
+        const article = document.createElement('article');
+        article.className = 'department-card';
+        const visual = document.createElement('div');
+        visual.className = 'department-visual';
+        if (department.image) {
+          const image = document.createElement('img');
+          image.className = 'department-card-image';
+          image.src = department.image;
+          image.alt = `${department.name}部门宣传图`;
+          image.loading = 'lazy';
+          visual.append(image);
+        } else {
+          visual.setAttribute('aria-hidden', 'true');
+          visual.innerHTML = '<span class="department-visual-mark">M<span>✳</span></span>';
+        }
+        const copy = document.createElement('div');
+        copy.className = 'department-copy';
+        const indexLabel = document.createElement('span');
+        indexLabel.className = 'department-index';
+        indexLabel.textContent = `DEPT. ${String(index + 1).padStart(2, '0')}`;
+        const title = document.createElement('h3');
+        title.textContent = department.name;
+        const description = document.createElement('p');
+        description.textContent = department.description || '介绍即将更新。';
+        copy.append(indexLabel, title, description);
+        article.append(visual, copy);
+        departmentList.append(article);
+      });
+    })
+    .catch(() => { departmentList.textContent = '部门介绍暂时无法加载。'; });
     const pageSections = [...document.querySelectorAll('main > section')];
     const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
     let pageScrollLocked = false;

@@ -120,6 +120,33 @@ class CategoryInput(BaseModel):
         return value
 
 
+class DepartmentInput(BaseModel):
+    name: str = Field(min_length=1, max_length=50)
+    description: str = Field(default="", max_length=2000)
+    image: str = Field(default="", max_length=200)
+
+    @field_validator("name")
+    @classmethod
+    def strip_name(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("部门名称不能为空")
+        return value
+
+    @field_validator("description")
+    @classmethod
+    def strip_description(cls, value: str) -> str:
+        return value.strip()
+
+    @field_validator("image")
+    @classmethod
+    def validate_image(cls, value: str) -> str:
+        value = value.strip()
+        if value and not re.fullmatch(r"/uploads/[a-zA-Z0-9._-]+", value):
+            raise ValueError("宣传图地址无效")
+        return value
+
+
 class ActivityPage(BaseModel):
     items: list[dict]
     total: int
@@ -274,9 +301,14 @@ def get_records(request: Request) -> Collection:
     return request.app.state.database.activity_records
 
 
+def get_departments(request: Request) -> Collection:
+    return request.app.state.database.departments
+
+
 Activities = Annotated[Collection, Depends(get_collection)]
 Categories = Annotated[Collection, Depends(get_categories)]
 Records = Annotated[Collection, Depends(get_records)]
+Departments = Annotated[Collection, Depends(get_departments)]
 
 DEFAULT_CATEGORIES = ["工作坊", "创客马拉松", "技术分享", "开源项目", "社团会议", "其他"]
 
@@ -311,6 +343,7 @@ async def lifespan(app: FastAPI):
     database.activity_records.create_index([("created_at", DESCENDING)])
     database.activity_records.create_index("activity_id")
     database.categories.create_index("name", unique=True)
+    database.departments.create_index("name", unique=True)
     database.users.create_index("username", unique=True)
     if database.categories.count_documents({}) == 0:
         seeded_at = datetime.now(timezone.utc)
@@ -782,6 +815,61 @@ async def upload_image(_: AdminUser, image: Annotated[UploadFile, File()]) -> di
 @app.get("/", include_in_schema=False)
 def index() -> FileResponse:
     return FileResponse(MAKER_DIR / "index.html")
+
+
+def serialize_department(document: dict) -> dict:
+    return {
+        "id": str(document["_id"]),
+        "name": document["name"],
+        "description": document.get("description", ""),
+        "image": document.get("image", ""),
+    }
+
+
+@app.get("/api/departments")
+def list_public_departments(departments: Departments) -> list[dict]:
+    return [serialize_department(item) for item in departments.find().sort("_id", ASCENDING)]
+
+
+@app.get("/api/admin/departments")
+def list_admin_departments(_: AdminUser, departments: Departments) -> list[dict]:
+    return list_public_departments(departments)
+
+
+@app.post("/api/admin/departments", status_code=status.HTTP_201_CREATED)
+def create_department(payload: DepartmentInput, _: AdminUser, departments: Departments) -> dict:
+    document = payload.model_dump()
+    try:
+        document["_id"] = departments.insert_one(document).inserted_id
+    except DuplicateKeyError:
+        raise HTTPException(status_code=409, detail="该部门已存在") from None
+    return serialize_department(document)
+
+
+@app.put("/api/admin/departments/{department_id}")
+def update_department(department_id: str, payload: DepartmentInput, _: AdminUser, departments: Departments) -> dict:
+    identifier = object_id_or_404(department_id, "部门不存在")
+    fields = payload.model_dump()
+    try:
+        result = departments.update_one({"_id": identifier}, {"$set": fields})
+    except DuplicateKeyError:
+        raise HTTPException(status_code=409, detail="该部门已存在") from None
+    if not result.matched_count:
+        raise HTTPException(status_code=404, detail="部门不存在")
+    return {"id": department_id, **fields}
+
+
+@app.delete("/api/admin/departments/{department_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_department(department_id: str, _: AdminUser, departments: Departments) -> Response:
+    result = departments.delete_one({"_id": object_id_or_404(department_id, "部门不存在")})
+    if not result.deleted_count:
+        raise HTTPException(status_code=404, detail="部门不存在")
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@app.get("/admin/departments", include_in_schema=False)
+def admin_departments() -> FileResponse:
+    return FileResponse(BASE_DIR / "static" / "departments.html")
 
 
 @app.get("/login", include_in_schema=False)
