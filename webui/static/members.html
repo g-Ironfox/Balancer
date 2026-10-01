@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/styles.css">
-  <link rel="stylesheet" href="/static/members.css">
+  <link rel="stylesheet" href="/static/members.css?v=20261001-4">
 </head>
 <body>
   <aside class="sidebar">
@@ -29,9 +29,21 @@
     <section class="page-heading"><div><div class="eyebrow"><span class="eyebrow-dot"></span> CLUB MEMBERS</div><h1>社团成员</h1><p>已注册的社团账号。</p></div></section>
     <section class="activity-section members-section" aria-label="已注册用户">
       <div class="section-heading"><div><h2>成员列表</h2></div><span class="result-count" id="member-count"></span></div>
-      <div class="table-wrap"><table><thead><tr><th>账号</th><th>真实姓名</th><th>学号</th><th>学院 / 专业</th><th>身份</th><th>注册时间</th></tr></thead><tbody id="member-rows"></tbody></table><div class="loading-state" id="member-status" role="status">正在载入成员…</div></div>
+      <div class="table-wrap"><table><thead><tr><th>账号</th><th>真实姓名</th><th>学号</th><th>学院 / 专业</th><th>身份</th><th>注册时间</th><th>操作</th></tr></thead><tbody id="member-rows"></tbody></table><div class="loading-state" id="member-status" role="status">正在载入成员…</div></div>
     </section>
   </main>
-  <script src="/static/members.js?v=20260925" defer></script>
+  <dialog id="password-dialog" class="activity-dialog" aria-labelledby="password-dialog-title">
+    <form method="dialog" id="password-form">
+      <div class="dialog-heading"><div><div class="eyebrow"><span class="eyebrow-dot"></span> ACCOUNT SECURITY</div><h2 id="password-dialog-title">修改成员密码</h2></div><button class="close-button" type="button" value="cancel" aria-label="关闭">×</button></div>
+      <p class="password-target" id="password-target"></p>
+      <div class="password-fields">
+        <label class="field">新密码<input id="new-password" type="password" minlength="8" maxlength="128" autocomplete="new-password" required></label>
+        <label class="field">确认新密码<input id="confirm-password" type="password" minlength="8" maxlength="128" autocomplete="new-password" required></label>
+      </div>
+      <p class="dialog-feedback" id="password-feedback" role="status"></p>
+      <div class="dialog-actions"><button class="text-button" type="button" value="cancel">取消</button><button class="primary-button" id="save-password" value="default">保存密码</button></div>
+    </form>
+  </dialog>
+  <script src="/static/members.js?v=20261001-4" defer></script>
 </body>
 </html>

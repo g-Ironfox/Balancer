@@ -1,5 +1,12 @@
 const memberRows = document.querySelector('#member-rows');
 const memberStatus = document.querySelector('#member-status');
+const passwordDialog = document.querySelector('#password-dialog');
+const passwordForm = document.querySelector('#password-form');
+const passwordTarget = document.querySelector('#password-target');
+const newPassword = document.querySelector('#new-password');
+const confirmPassword = document.querySelector('#confirm-password');
+const passwordFeedback = document.querySelector('#password-feedback');
+const savePassword = document.querySelector('#save-password');
 const roleLabels = { member: '会员', user: '普通成员', core: '核心成员', admin: '系统管理员' };
 
 function applyTheme(theme) {
@@ -44,6 +51,9 @@ function renderMembers(members, currentUser) {
       const feedback = document.createElement('span');
       feedback.className = 'role-feedback';
       feedback.setAttribute('role', 'status');
+      roleCell.className = 'member-role-cell';
+      const roleEditor = document.createElement('div');
+      roleEditor.className = 'role-editor';
       select.addEventListener('change', async () => {
         const previousRole = member.role;
         select.disabled = true;
@@ -67,15 +77,69 @@ function renderMembers(members, currentUser) {
           select.disabled = member.id === currentUser.id;
         }
       });
-      roleCell.append(select, feedback);
+      roleEditor.append(select, feedback);
+      roleCell.append(roleEditor);
     }
     row.insertCell().textContent = member.created_at
       ? new Date(member.created_at).toLocaleString('zh-CN', { dateStyle: 'medium', timeStyle: 'short' })
       : '—';
+    const actionCell = row.insertCell();
+    if (currentUser.role === 'admin') {
+      const button = document.createElement('button');
+      button.className = 'text-button password-button';
+      button.type = 'button';
+      button.textContent = '修改密码';
+      button.addEventListener('click', () => openPasswordDialog(member));
+      actionCell.append(button);
+    } else {
+      actionCell.textContent = '—';
+    }
   }
   memberStatus.hidden = members.length > 0;
   if (!members.length) memberStatus.textContent = '暂无已注册成员';
 }
+
+function openPasswordDialog(member) {
+  passwordDialog.dataset.memberId = member.id;
+  passwordTarget.textContent = `正在修改：${member.username}`;
+  passwordForm.reset();
+  passwordFeedback.textContent = '';
+  passwordDialog.showModal();
+  newPassword.focus();
+}
+
+passwordForm.querySelectorAll('[value="cancel"]').forEach((button) => {
+  button.addEventListener('click', () => passwordDialog.close());
+});
+
+passwordForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  if (newPassword.value !== confirmPassword.value) {
+    passwordFeedback.textContent = '两次输入的密码不一致';
+    confirmPassword.focus();
+    return;
+  }
+  savePassword.dataset.busy = 'true';
+  savePassword.textContent = '保存中…';
+  passwordFeedback.textContent = '';
+  try {
+    const response = await fetch(`/api/admin/members/${passwordDialog.dataset.memberId}/password`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: newPassword.value }),
+    });
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      throw new Error(body.detail || '保存失败，请重试');
+    }
+    passwordDialog.close();
+  } catch (error) {
+    passwordFeedback.textContent = error.message;
+  } finally {
+    delete savePassword.dataset.busy;
+    savePassword.textContent = '保存密码';
+  }
+});
 
 document.querySelector('#theme-toggle').addEventListener('click', () => {
   const theme = document.body.classList.contains('dark') ? 'light' : 'dark';

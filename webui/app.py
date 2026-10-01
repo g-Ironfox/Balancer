@@ -186,6 +186,10 @@ class MemberRoleInput(BaseModel):
     role: Literal["member", "user", "core", "admin"]
 
 
+class MemberPasswordInput(BaseModel):
+    password: str = Field(min_length=8, max_length=128)
+
+
 def session_key(token: str) -> str:
     return f"session:{hashlib.sha256(token.encode()).hexdigest()}"
 
@@ -451,6 +455,20 @@ def update_member_role(member_id: str, payload: MemberRoleInput, admin: AdminUse
         raise HTTPException(status_code=409, detail="不能取消自己的管理员身份")
     users.update_one({"_id": member["_id"]}, {"$set": {"role": payload.role}})
     return {"id": str(member["_id"]), "role": payload.role}
+
+
+@app.put("/api/admin/members/{member_id}/password")
+def update_member_password(member_id: str, payload: MemberPasswordInput, admin: AdminUser, users: Users) -> dict:
+    if admin["role"] != "admin":
+        raise HTTPException(status_code=403, detail="仅系统管理员可修改成员密码")
+    member = users.find_one({"_id": object_id_or_404(member_id, "成员不存在")})
+    if member is None:
+        raise HTTPException(status_code=404, detail="成员不存在")
+    users.update_one(
+        {"_id": member["_id"]},
+        {"$set": {"password_hash": password_hasher.hash(payload.password)}},
+    )
+    return {"id": str(member["_id"])}
 
 
 @app.get("/api/auth/activities")

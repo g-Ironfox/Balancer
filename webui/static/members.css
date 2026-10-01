@@ -1,12 +1,34 @@
 .members-section .section-heading { display: flex; align-items: center; justify-content: space-between; }
 .members-section .table-wrap { overflow-x: auto; }
-.members-section table { min-width: 830px; }
+.members-section table { min-width: 930px; }
 .members-section td { color: var(--ink); overflow-wrap: anywhere; }
 .member-account { display: flex; align-items: center; gap: 12px; font-weight: 600; overflow-wrap: anywhere; }
 .member-avatar { display: grid; place-items: center; width: 34px; height: 34px; flex: none; border-radius: 50%; background: var(--mint); color: var(--green); font-weight: 700; }
 .member-role { width: 110px; padding: 6px; border: 1px solid #cbd9ce; border-radius: 4px; background: var(--paper); color: var(--ink); font: inherit; cursor: pointer; }
 .member-role:disabled { opacity: .65; cursor: default; }
-.role-feedback { display: block; min-height: 15px; margin-top: 3px; color: var(--muted); font-size: 10px; }
+.member-role-cell { vertical-align: middle; }
+.role-editor { position: relative; display: flex; align-items: center; min-height: 34px; }
+.role-feedback { position: absolute; top: 100%; left: 0; white-space: nowrap; color: var(--muted); font-size: 10px; }
+.password-button { white-space: nowrap; }
+#password-dialog { width: min(440px, calc(100% - 28px)); border: 1px solid #ccd8ce; padding: 25px 28px 24px; box-shadow: 0 24px 70px #101d17a8; }
+#password-dialog .dialog-heading { align-items: center; border: 0; padding: 0; }
+#password-dialog .close-button { width: 32px; height: 32px; border-radius: 5px; display: grid; place-items: center; }
+#password-dialog .close-button:hover { background: var(--mint); color: var(--green); }
+.password-target { margin: 10px 0 25px; color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+.password-fields { display: grid; gap: 18px; }
+#password-dialog .field { gap: 8px; font-size: 12px; }
+#password-dialog .field input { min-height: 42px; font-size: 14px; }
+.dialog-feedback { min-height: 18px; margin: 10px 0 0; color: #b34b3d; font-size: 12px; }
+.dialog-feedback:empty { margin: 0; }
+#password-dialog .dialog-actions { gap: 10px; margin-top: 26px; padding-top: 18px; }
+#password-dialog .dialog-actions .text-button { padding: 8px 11px; }
+#password-dialog .primary-button[data-busy="true"] { opacity: .65; pointer-events: none; }
+body.dark #password-dialog { border-color: #54695b; }
+body.dark #password-dialog .field input { background: #17241d; border-color: #617568; color: #e7eee9; }
+body.dark #password-dialog .field input:focus { border-color: #99c5a8; box-shadow: 0 0 0 3px #99c5a830; }
+body.dark #password-dialog .close-button { color: #c7d3cb; }
+body.dark #password-dialog .close-button:hover { background: #304439; color: white; }
+body.dark #password-dialog .dialog-actions { border-color: #435648; }
 .members-section .loading-state { text-align: center; padding: 30px 16px; }
 .members-section .loading-state[hidden] { display: none; }
 body.dark .members-section td { color: var(--ink); }
