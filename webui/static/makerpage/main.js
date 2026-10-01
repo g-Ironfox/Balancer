@@ -1,6 +1,40 @@
 window.addEventListener('load', () => {
   window.lucide?.createIcons();
   const departmentList = document.querySelector('#department-list');
+  const departmentDetail = document.querySelector('#department-detail');
+  const departmentDetailContent = document.querySelector('#department-detail-content');
+
+  function openDepartmentDetail(department, index) {
+    departmentDetailContent.replaceChildren();
+    const label = document.createElement('p');
+    label.className = 'department-detail-index';
+    label.textContent = `DEPT. ${String(index + 1).padStart(2, '0')}`;
+    const title = document.createElement('h2');
+    title.id = 'department-detail-title';
+    title.textContent = department.name;
+    departmentDetailContent.append(label, title);
+    if (department.image) {
+      const image = document.createElement('img');
+      image.className = 'department-detail-image';
+      image.src = department.image;
+      image.alt = `${department.name}部门宣传图`;
+      departmentDetailContent.append(image);
+    }
+    const description = document.createElement('p');
+    description.className = 'department-detail-summary';
+    description.textContent = department.description || '介绍即将更新。';
+    const detail = document.createElement('p');
+    detail.className = 'department-detail-description';
+    detail.textContent = department.detail || '详细介绍即将更新。';
+    departmentDetailContent.append(description, detail);
+    departmentDetail.showModal();
+  }
+
+  document.querySelector('#department-detail-close').addEventListener('click', () => departmentDetail.close());
+  departmentDetail.addEventListener('click', (event) => {
+    if (event.target === departmentDetail) departmentDetail.close();
+  });
+
   fetch('/api/departments')
     .then((response) => {
       if (!response.ok) throw new Error('部门暂时无法加载');
@@ -15,6 +49,16 @@ window.addEventListener('load', () => {
       departments.forEach((department, index) => {
         const article = document.createElement('article');
         article.className = 'department-card';
+        article.tabIndex = 0;
+        article.setAttribute('role', 'button');
+        article.setAttribute('aria-label', `查看${department.name}部门详情`);
+        article.addEventListener('click', () => openDepartmentDetail(department, index));
+        article.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            openDepartmentDetail(department, index);
+          }
+        });
         const visual = document.createElement('div');
         visual.className = 'department-visual';
         if (department.image) {

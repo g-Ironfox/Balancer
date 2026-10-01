@@ -18,7 +18,9 @@
 .members-section th:nth-child(4) { width: 18%; }
 .members-section td { font-size: 15px; line-height: 1.7; overflow-wrap: anywhere; }
 .members-section td:first-child { font-weight: 700; color: var(--ink); }
-.members-section td:nth-child(2) { color: var(--muted); font-size: 13px; }
+.members-section td:nth-child(2) { width: 42%; max-width: 620px; color: var(--muted); font-size: 13px; white-space: normal; overflow-wrap: anywhere; word-break: break-word; }
+.members-section td:nth-child(3) { white-space: nowrap; }
+.members-section td:nth-child(4) { width: 1%; }
 .department-actions { white-space: nowrap; text-align: right; }
 .department-actions .text-button { margin-left: 6px; padding: 8px 11px; border: 1px solid transparent; border-radius: 5px; font-size: 14px; font-weight: 600; transition: background .16s, border-color .16s; }
 .department-actions .text-button:hover { border-color: var(--line); background: color-mix(in srgb, var(--mint) 35%, transparent); }

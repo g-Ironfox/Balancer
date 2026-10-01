@@ -69,6 +69,7 @@ function openDialog(department = null) {
   document.querySelector('#department-id').value = department?.id || '';
   document.querySelector('#department-name').value = department?.name || '';
   document.querySelector('#department-description').value = department?.description || '';
+  document.querySelector('#department-detail').value = department?.detail || '';
   document.querySelector('#department-image').value = '';
   selectedImageUrl = department?.image || '';
   renderImagePreview();
@@ -125,6 +126,7 @@ form.addEventListener('submit', async (event) => {
   const payload = {
     name: document.querySelector('#department-name').value,
     description: document.querySelector('#department-description').value,
+    detail: document.querySelector('#department-detail').value,
     image: selectedImageUrl,
   };
   try {

@@ -9,7 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/styles.css">
   <link rel="stylesheet" href="/static/members.css">
-  <link rel="stylesheet" href="/static/departments.css">
+  <link rel="stylesheet" href="/static/departments.css?v=2">
 </head>
 <body>
   <aside class="sidebar">
@@ -40,6 +40,7 @@
       <div class="form-grid">
         <label class="field field-wide">部门名称<input id="department-name" maxlength="50" required></label>
         <label class="field field-wide">部门介绍<textarea id="department-description" rows="6" maxlength="2000" placeholder="介绍部门的方向、日常工作或欢迎加入的方式"></textarea></label>
+        <label class="field field-wide">详细介绍<textarea id="department-detail" rows="10" maxlength="5000" placeholder="详细介绍部门的工作内容、特色方向、日常活动与加入方式"></textarea></label>
         <label class="field field-wide">部门宣传图<input id="department-image" type="file" accept="image/png,image/jpeg,image/webp,image/gif"><span class="field-note">单张图片，支持 PNG / JPEG / WebP / GIF，最大 5 MB</span></label>
         <div class="department-image-preview" id="department-image-preview" hidden></div>
       </div>

@@ -123,6 +123,7 @@ class CategoryInput(BaseModel):
 class DepartmentInput(BaseModel):
     name: str = Field(min_length=1, max_length=50)
     description: str = Field(default="", max_length=2000)
+    detail: str = Field(default="", max_length=5000)
     image: str = Field(default="", max_length=200)
 
     @field_validator("name")
@@ -136,6 +137,11 @@ class DepartmentInput(BaseModel):
     @field_validator("description")
     @classmethod
     def strip_description(cls, value: str) -> str:
+        return value.strip()
+
+    @field_validator("detail")
+    @classmethod
+    def strip_detail(cls, value: str) -> str:
         return value.strip()
 
     @field_validator("image")
@@ -840,6 +846,7 @@ def serialize_department(document: dict) -> dict:
         "id": str(document["_id"]),
         "name": document["name"],
         "description": document.get("description", ""),
+        "detail": document.get("detail", ""),
         "image": document.get("image", ""),
     }
 
